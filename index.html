@@ -3,42 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Industrial WTP Simulation</title>
+    <title>Pro-Grade 3D WTP Simulation</title>
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --panel-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #38bdf8;
-            --border: #334155;
-            --danger: #ef4444;
-            --success: #10b981;
+            --bg-main: #0a0e17;
+            --panel-bg: rgba(13, 20, 36, 0.85);
+            --panel-border: #1e3a5f;
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            --accent: #00d2ff;
+            --accent-glow: rgba(0, 210, 255, 0.4);
+            --danger: #ff4757;
+            --success: #2ed573;
+            --grid-color: rgba(30, 58, 95, 0.5);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Consolas', 'Courier New', monospace; /* Industrial SCADA look */
         }
 
         body {
-            background-color: var(--bg-dark);
+            background: radial-gradient(circle at center, #111a2e 0%, var(--bg-main) 100%);
             color: var(--text-main);
             display: flex;
             height: 100vh;
             overflow: hidden;
+            backdrop-filter: blur(10px);
         }
 
-        /* Layout */
+        /* SCADA HUD Layout */
         #sidebar {
-            width: 250px;
+            width: 280px;
             background: var(--panel-bg);
-            border-right: 1px solid var(--border);
+            border-right: 1px solid var(--panel-border);
             display: flex;
             flex-direction: column;
             z-index: 10;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
         }
 
         #viewport {
@@ -47,461 +51,642 @@
         }
 
         #info-panel {
-            width: 350px;
+            width: 400px;
             background: var(--panel-bg);
-            border-left: 1px solid var(--border);
-            padding: 20px;
+            border-left: 1px solid var(--panel-border);
+            padding: 25px;
             overflow-y: auto;
             z-index: 10;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
         }
 
-        /* Sidebar Nav */
+        /* Nav Design */
         .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 25px 20px;
+            border-bottom: 1px solid var(--panel-border);
             font-weight: bold;
+            font-size: 1.1rem;
             color: var(--accent);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-glow);
         }
 
         .nav-btn {
             background: none;
             border: none;
             color: var(--text-muted);
-            padding: 15px 20px;
+            padding: 18px 20px;
             text-align: left;
             cursor: pointer;
             border-left: 4px solid transparent;
-            transition: 0.2s;
+            transition: all 0.3s ease;
             font-size: 0.95rem;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .nav-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, var(--panel-border) 0%, transparent 100%);
         }
 
         .nav-btn:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(0, 210, 255, 0.05);
             color: var(--text-main);
+            padding-left: 25px;
         }
 
         .nav-btn.active {
-            background: rgba(56, 189, 248, 0.1);
+            background: rgba(0, 210, 255, 0.1);
             color: var(--accent);
             border-left-color: var(--accent);
-            font-weight: 600;
+            font-weight: bold;
+            text-shadow: 0 0 8px var(--accent-glow);
         }
 
-        /* Info Panel Typography */
-        h2 { font-size: 1.4rem; color: var(--accent); margin-bottom: 15px; }
-        h3 { font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin: 15px 0 5px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
-        p { font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px; color: #cbd5e1; }
+        /* Details Typography */
+        h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--panel-border); padding-bottom: 10px; }
+        h3 { font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin: 20px 0 10px; letter-spacing: 1px; }
+        p { font-size: 0.9rem; line-height: 1.6; margin-bottom: 15px; font-family: 'Segoe UI', system-ui, sans-serif; color: #cbd5e1; }
         
-        .io-box {
-            background: rgba(0,0,0,0.2);
-            border-radius: 6px;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border);
+        .io-container {
+            border: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            position: relative;
         }
-        
-        .io-title { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; }
+
+        /* Corner brackets for tech feel */
+        .io-container::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid var(--text-muted); border-left: 2px solid var(--text-muted); }
+        .io-container::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid var(--text-muted); border-right: 2px solid var(--text-muted); }
+
+        .io-title { font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
         .input-title { color: var(--accent); }
         .output-title { color: var(--success); }
         .reject-title { color: var(--danger); }
         
-        .io-detail { font-size: 0.85rem; color: #e2e8f0; }
-        
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        .io-detail { font-size: 0.9rem; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
+        .io-detail ul { margin-left: 20px; margin-top: 5px; }
+        .io-detail li { margin-bottom: 4px; }
 
-        .overlay-instruction {
+        .sys-badge {
+            display: inline-block;
+            background: rgba(0, 210, 255, 0.15);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            margin-bottom: 15px;
+        }
+        
+        #canvas-container { width: 100%; height: 100%; }
+
+        .hud-overlay {
             position: absolute;
-            bottom: 20px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.6);
-            padding: 8px 16px;
-            border-radius: 20px;
+            background: rgba(13, 20, 36, 0.7);
+            border: 1px solid var(--panel-border);
+            padding: 10px 20px;
+            border-radius: 4px;
             font-size: 0.85rem;
+            color: var(--accent);
             pointer-events: none;
-            color: #94a3b8;
+            text-align: center;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
     </style>
-    <!-- Three.js Library & OrbitControls -->
+    <!-- Three.js (Core & OrbitControls) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
     <nav id="sidebar">
-        <div class="sidebar-header">WTP Simulation</div>
+        <div class="sidebar-header">WTP.SYS // V1.0</div>
         <div id="nav-container"></div>
     </nav>
 
     <main id="viewport">
         <div id="canvas-container"></div>
-        <div class="overlay-instruction">Klik dan geser untuk memutar 3D. Scroll untuk Zoom.</div>
+        <div class="hud-overlay">
+            [ L-CLICK ]: ROTATE &nbsp;&nbsp;|&nbsp;&nbsp; [ R-CLICK ]: PAN &nbsp;&nbsp;|&nbsp;&nbsp; [ SCROLL ]: ZOOM
+        </div>
     </main>
 
     <aside id="info-panel">
-        <h2 id="p-title">Sistem WTP</h2>
-        <p id="p-desc">Pilih tahapan di menu sebelah kiri untuk melihat detail struktural, spesifikasi input, output, dan parameter operasional.</p>
+        <span class="sys-badge" id="p-badge">SYS.READY</span>
+        <h2 id="p-title">System WTP</h2>
+        <p id="p-desc">Pilih modul di terminal navigasi untuk inisialisasi render 3D struktur internal.</p>
         
         <div id="p-details" style="display: none;">
-            <h3>Input (Masukan)</h3>
-            <div class="io-box">
-                <div class="io-title input-title">Air Umpan & Material Kimia</div>
-                <div class="io-detail" id="p-input">...</div>
+            <div class="io-container">
+                <div class="io-title input-title">>> INLET [ FEED_STREAM ]</div>
+                <div class="io-detail" id="p-input"></div>
             </div>
 
-            <h3>Output (Hasil)</h3>
-            <div class="io-box">
-                <div class="io-title output-title">Air Terolah (Product)</div>
-                <div class="io-detail" id="p-output">...</div>
+            <div class="io-container">
+                <div class="io-title output-title">>> OUTLET [ PRODUCT_STREAM ]</div>
+                <div class="io-detail" id="p-output"></div>
             </div>
 
-            <h3>Reject / Limbah</h3>
-            <div class="io-box">
-                <div class="io-title reject-title">Limbah Buangan (Waste)</div>
-                <div class="io-detail" id="p-reject">...</div>
+            <div class="io-container">
+                <div class="io-title reject-title">>> REJECT [ WASTE_STREAM ]</div>
+                <div class="io-detail" id="p-reject"></div>
             </div>
 
-            <h3>Mekanisme Internal</h3>
-            <p id="p-mech" style="font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;"></p>
+            <h3>// CORE_MECHANISM</h3>
+            <p id="p-mech" style="background: rgba(0,0,0,0.4); padding: 15px; border-left: 2px solid var(--accent); font-family: 'Segoe UI';"></p>
         </div>
     </aside>
 
     <script>
-        // Data Spesifikasi End-to-End WTP
         const wtpData = [
             {
-                id: 0, name: "End-to-End Plant", title: "Sistem End-to-End WTP",
-                desc: "Rangkaian lengkap Water Treatment Plant dari raw water hingga ultra-pure water.",
-                input: "Air Baku (Raw Water) dari sungai/sumur dalam.",
-                output: "Demineralized Water (Air Bebas Mineral) < 0.1 µS/cm.",
-                reject: "Sludge, Air Backwash, RO Brine, Limbah Asam/Basa.",
-                mech: "Air dipompa melewati pemisahan fisik (Clarifier, MMF), pemisahan kimia/adsorpsi (ACF, Softener), hingga pemisahan membran tingkat molekuler (UF, RO) dan pertukaran ion (Mixed Bed)."
+                id: 0, name: "SYSTEM_OVERVIEW", title: "Plant Layout", badge: "PLANT.MACRO",
+                desc: "Rangkaian lengkap perpipaan dan vessel Industrial Water Treatment Plant.",
+                input: "<ul><li>Raw Water (Sungai/Sumur)</li></ul>",
+                output: "<ul><li>Demineralized Water < 0.1 µS/cm</li></ul>",
+                reject: "<ul><li>Sludge, Brine, Backwash Waste</li></ul>",
+                mech: "Sistem hibrida yang menggabungkan separasi mekanis (gravitasi & filtrasi bed), separasi adsorpsi (karbon aktif), pertukaran ion (resin), dan pemisahan membran tekanan tinggi."
             },
             {
-                id: 1, name: "1. Clarifier", title: "Clarifier (Pengendap)",
-                desc: "Pemisahan fisik awal menggunakan gaya gravitasi dan koagulasi.",
-                input: "• Raw Water (TSS tinggi)<br>• Koagulan (PAC / Tawas)<br>• Flokulan (Polymer)",
-                output: "• Clarified Water (< 5 NTU)",
-                reject: "• Sludge / Lumpur Padat (Dibuang via bottom scraper ke Sludge Holding Tank)",
-                mech: "Bahan kimia mendestabilisasi muatan kotoran sehingga saling mengikat membentuk flok. Kecepatan aliran air ke atas (upflow) dijaga lebih rendah dari kecepatan jatuhnya flok ke bawah."
+                id: 1, name: "MOD_01 : CLARIFIER", title: "Clarifier Tank", badge: "UNIT.01_GRAVITY",
+                desc: "Tangki pengendapan mekanis berukuran besar untuk memisahkan flok koagulan.",
+                input: "<ul><li>Feed: Raw Water</li><li>Chemical: PAC (Koagulan) & Polymer</li></ul>",
+                output: "<ul><li>Product: Clarified Water (Turbidity < 5 NTU)</li></ul>",
+                reject: "<ul><li>Waste: Sludge / Lumpur Dasar</li></ul>",
+                mech: "Air dimasukkan via center-well. Kecepatan upflow dirancang sangat rendah memungkinkan gravitasi menarik flok padat ke bawah. Scraper berputar mengumpulkan lumpur ke pusat."
             },
             {
-                id: 2, name: "2. Multimedia Filter", title: "Multimedia Filter (MMF)",
-                desc: "Penyaringan mekanis sisa tersuspensi menggunakan media bergradasi.",
-                input: "• Clarified Water (pompa tekanan rendah)",
-                output: "• Filtered Water (SDI < 5, Turbidity < 1 NTU)",
-                reject: "• Backwash Waste (Air cucian kotor sarat partikel)",
-                mech: "Air mengalir ke bawah (downflow). Lapisan Antrasit (kasar) di atas menahan kotoran makro, Pasir Silika (menengah) di tengah, dan Garnet (sangat halus) di bawah menahan sisa partikel. Dicuci berkala (backwash) dengan membalik aliran air ke atas."
+                id: 2, name: "MOD_02 : MULTIMEDIA", title: "Multimedia Filter", badge: "UNIT.02_FILTRATION",
+                desc: "Pressure vessel bertekanan dengan lapisan media bergradasi untuk filtrasi fisik absolut.",
+                input: "<ul><li>Feed: Clarified Water</li><li>Tekanan: 2 - 4 Bar</li></ul>",
+                output: "<ul><li>Product: Filtered Water (SDI < 5)</li></ul>",
+                reject: "<ul><li>Waste: Air Backwash</li></ul>",
+                mech: "Aliran downflow menembus lapisan Antrasit (menahan kotoran makro), Pasir Silika (mikro), dan Garnet (sangat halus). Saat mampet (Delta P tinggi), katup membalik aliran untuk backwash."
             },
             {
-                id: 3, name: "3. Activated Carbon", title: "Activated Carbon Filter (ACF)",
-                desc: "Adsorpsi bahan kimia organik dan perlindungan membran dari Klorin.",
-                input: "• Filtered Water<br>• Klorin bebas (dari klorinasi awal)",
-                output: "• De-chlorinated Water (Klorin < 0.1 ppm, bebas bau)",
-                reject: "• Backwash Waste (Hanya debu karbon, klorin terikat permanen)",
-                mech: "Bukan penyaring fisik. Luas permukaan pori-pori mikroskopis karbon aktif menarik dan mengikat molekul organik, warna, bau, serta mereduksi Klorin menjadi klorida yang aman bagi polimer RO."
+                id: 3, name: "MOD_03 : CARBON", title: "Activated Carbon", badge: "UNIT.03_ADSORPTION",
+                desc: "Vessel adsorpsi mikroskopis untuk perlindungan membran RO dari zat perusak.",
+                input: "<ul><li>Feed: Filtered Water</li><li>Kontaminan: Klorin Bebas, Organik</li></ul>",
+                output: "<ul><li>Product: De-chlorinated Water</li></ul>",
+                reject: "<ul><li>Waste: Debu karbon saat initial rinse</li></ul>",
+                mech: "Reaksi kimia katalitik; bukan saringan fisik. Luas permukaan pori karbon aktif mengikat klorin bebas secara molekuler (menjadi ion klorida tidak berbahaya) agar membran poliamida RO tidak hancur."
             },
             {
-                id: 4, name: "4. Softener", title: "Ion Exchange Softener",
-                desc: "Pelunakan air dari kalsium dan magnesium penyebab kerak boiler/membran.",
-                input: "• De-chlorinated Water (Tinggi Kesadahan / Hardness)<br>• NaCl (Garam dapur untuk Regenerasi)",
-                output: "• Soft Water (Hardness mendekati 0 ppm)",
-                reject: "• Limbah CaCl2 & MgCl2 (Hasil cucian buangan saat regenerasi)",
-                mech: "Resin Kation bermuatan Sodium (Na+). Saat air masuk, ion Ca2+ dan Mg2+ ditarik menempel pada resin, menggeser ion Na+ keluar bersama air. Regenerasi dilakukan dengan merendam resin dalam air garam pekat."
+                id: 4, name: "MOD_04 : SOFTENER", title: "Ion Softener", badge: "UNIT.04_ION_EXCHANGE",
+                desc: "Penukar ion kation untuk mencegah pembentukan kerak (scaling) kalsium/magnesium.",
+                input: "<ul><li>Feed: Air Sadah (Hard Water)</li><li>Regenerant: NaCl (Air Garam)</li></ul>",
+                output: "<ul><li>Product: Soft Water (Ca/Mg = 0)</li></ul>",
+                reject: "<ul><li>Waste: Limbah CaCl2 & MgCl2 pekat</li></ul>",
+                mech: "Manik-manik resin kation bermuatan Sodium (Na+). Ion Kalsium/Magnesium menempel kuat pada resin, melepaskan Sodium ke air. Diregenerasi paksa menggunakan Brine pekat."
             },
             {
-                id: 5, name: "5. Ultrafiltration", title: "Ultrafiltration (UF)",
-                desc: "Filtrasi cross-flow skala 0.01 mikron untuk memutus koloid dan patogen.",
-                input: "• Soft Water",
-                output: "• UF Permeate (SDI < 3, Bebas Bakteri)",
-                reject: "• UF Reject (Konsentrat aliran permukaan) & Air Backwash harian",
-                mech: "Air didorong masuk ke dalam ribuan pipa serat berongga (hollow fiber). Air murni menembus dinding serat ke arah luar, sementara koloid dan bakteri tertahan di dalam tabung dan didorong ke saluran pembuangan."
+                id: 5, name: "MOD_05 : ULTRAFILTRATION", title: "Ultrafiltration", badge: "UNIT.05_MEMBRANE",
+                desc: "Skid membran hollow-fiber tekanan rendah sebagai final pre-treatment.",
+                input: "<ul><li>Feed: Soft Water</li><li>Tekanan: 1 - 3 Bar</li></ul>",
+                output: "<ul><li>Product: UF Permeate (Bebas Koloid/Bakteri)</li></ul>",
+                reject: "<ul><li>Waste: Konsentrat silika & biologis</li></ul>",
+                mech: "Aliran cross-flow di dalam ribuan serat seperti sedotan. Pori-pori dinding serat 0.01 mikron meloloskan air murni (Permeate) dan menyapu bersih patogen/koloid (Reject)."
             },
             {
-                id: 6, name: "6. Reverse Osmosis", title: "Reverse Osmosis (RO)",
-                desc: "Pemisahan molekuler melawan osmosis alami menggunakan tekanan tinggi.",
-                input: "• UF Permeate<br>• Antiscalant (Injeksi anti-kerak)<br>• Tekanan Tinggi (10 - 25 Bar)",
-                output: "• RO Permeate (TDS < 10 ppm, Konduktivitas sangat rendah)",
-                reject: "• RO Brine / Concentrate (Air buangan dengan konsentrasi garam dan TDS yang sangat pekat)",
-                mech: "Air dipaksa menembus membran 0.0001 mikron. Membran spiral-wound menolak hingga 99% ion mineral terlarut (TDS), membiarkan hanya H2O yang lewat."
+                id: 6, name: "MOD_06 : REVERSE OSMOSIS", title: "Reverse Osmosis", badge: "UNIT.06_HIGH_PRESSURE",
+                desc: "Jantung pemurnian WTP. Pemisahan TDS level molekuler.",
+                input: "<ul><li>Feed: UF Permeate</li><li>Chemical: Antiscalant</li><li>Tekanan Tinggi: 12 - 25 Bar</li></ul>",
+                output: "<ul><li>Product: RO Permeate (TDS < 10 ppm)</li></ul>",
+                reject: "<ul><li>Waste: RO Brine (Garam Konsentrat Tinggi)</li></ul>",
+                mech: "Pompa bertekanan sangat tinggi melawan tekanan osmotik alami. Air didorong menembus membran spiral-wound 0.0001 mikron. 99% ion mineral tertahan dan dibuang sebagai brine."
             },
             {
-                id: 7, name: "7. Mixed Bed", title: "Mixed Bed Demineralizer",
-                desc: "Pemurnian absolut (polishing) untuk air umpan boiler turbin uap.",
-                input: "• RO Permeate<br>• HCl (Asam Kuat untuk regen Kation)<br>• NaOH (Basa Kuat untuk regen Anion)",
-                output: "• Ultrapure / Demineralized Water (Konduktivitas < 0.1 µS/cm)",
-                reject: "• Limbah Asam & Basa (Sisa regenerasi kimiawi)",
-                mech: "Campuran homogen antara Resin Kation (H+) dan Resin Anion (OH-). Sisa kation logam diikat dan ditukar dengan H+, sisa anion non-logam ditukar OH-. Keduanya bergabung instan menjadi H2O. Karena dicampur, reaksi ini terjadi ribuan kali berlapis-lapis."
+                id: 7, name: "MOD_07 : MIXED BED", title: "Mixed Bed Demin", badge: "UNIT.07_POLISHING",
+                desc: "Tahap polishing akhir pembuat air ultra-murni untuk industri berat.",
+                input: "<ul><li>Feed: RO Permeate (TDS Rendah)</li><li>Regenerant: HCl & NaOH</li></ul>",
+                output: "<ul><li>Product: Ultrapure Water (Konduktivitas < 0.1 µS)</li></ul>",
+                reject: "<ul><li>Waste: Limbah Asam (H+) & Basa (OH-)</li></ul>",
+                mech: "Campuran homogen Resin Kation Asam Kuat dan Resin Anion Basa Kuat dalam satu tabung. Penukaran sisa ion logam menjadi H+ dan non-logam menjadi OH- terjadi instan, langsung membentuk molekul H2O baru."
             }
         ];
 
-        // --- Three.js Setup ---
+        // --- 1. THREE.JS ENGINE SETUP ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
-
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(0, 5, 12);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        // Setup Renderer with Pro settings
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
         container.appendChild(renderer.domElement);
 
+        const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 1000);
+        
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.1; // Limit panning under the floor
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // --- 2. ADVANCED LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
         scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(10, 20, 10);
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(10, 20, 15);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 50;
+        dirLight.shadow.bias = -0.001;
         scene.add(dirLight);
 
-        // Group to hold current 3D Model
-        let currentModel = new THREE.Group();
-        scene.add(currentModel);
+        const pointLight = new THREE.PointLight(0x00d2ff, 1.5, 30);
+        pointLight.position.set(-5, 10, -5);
+        scene.add(pointLight);
 
-        // Common Materials
-        const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x88ccff, transparent: true, opacity: 0.2, roughness: 0.1, transmission: 0.9, thickness: 0.5 });
-        const solidSteel = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4, metalness: 0.6 });
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+        // --- 3. PRO-GRADE MATERIALS ---
+        // Industrial Steel
+        const steelMat = new THREE.MeshStandardMaterial({ 
+            color: 0x8899a6, 
+            roughness: 0.3, 
+            metalness: 0.8 
+        });
+        
+        // PVC Pipe
+        const pvcMat = new THREE.MeshStandardMaterial({ 
+            color: 0x2c3e50, 
+            roughness: 0.5, 
+            metalness: 0.1 
+        });
 
-        // Helper function to clear scene
-        function clearModel() {
-            while(currentModel.children.length > 0){ 
-                currentModel.remove(currentModel.children[0]); 
+        // Advanced Glass / Cutaway Material (Physical)
+        const glassMat = new THREE.MeshPhysicalMaterial({
+            color: 0xcbe3f7,
+            metalness: 0.1,
+            roughness: 0.05,
+            transmission: 0.95, // Glass effect
+            ior: 1.5,
+            thickness: 0.5,
+            side: THREE.DoubleSide,
+            transparent: true
+        });
+
+        // Water Material
+        const waterMat = new THREE.MeshPhysicalMaterial({
+            color: 0x00a8ff,
+            transmission: 0.8,
+            opacity: 0.9,
+            transparent: true,
+            roughness: 0.1
+        });
+
+        const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8, metalness: 0.5 });
+
+        // --- 4. SCENE UTILITIES ---
+        let currentGroup = new THREE.Group();
+        scene.add(currentGroup);
+
+        // Floor Grid
+        const grid = new THREE.GridHelper(50, 50, 0x1e3a5f, 0x1e3a5f);
+        grid.position.y = -0.01;
+        grid.material.opacity = 0.4;
+        grid.material.transparent = true;
+        scene.add(grid);
+
+        // Floor Plane (receives shadow)
+        const floorGeo = new THREE.PlaneGeometry(50, 50);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0e17, roughness: 1 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        function clearScene() {
+            while(currentGroup.children.length > 0){ 
+                currentGroup.remove(currentGroup.children[0]); 
             }
+            currentGroup.userData = {}; // Reset animations
         }
 
-        // --- 3D Builders ---
-        function buildEndToEnd() {
-            // A miniature sequence of tanks
-            const spacing = 2.5;
-            const startX = -7.5;
-            
-            const createMiniTank = (x, color, label) => {
-                const geo = new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
-                const mat = new THREE.MeshStandardMaterial({ color: color });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(x, 1, 0);
-                currentModel.add(mesh);
-                
-                // Connecting Pipe
-                if(x > startX) {
-                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, spacing, 8), solidSteel);
-                    pipe.rotation.z = Math.PI / 2;
-                    pipe.position.set(x - spacing/2, 0.2, 0);
-                    currentModel.add(pipe);
-                }
-            };
+        // --- 5. BUILDER FUNCTIONS (Plant 3D Style) ---
+        
+        // Creates a professional pressure vessel with domed ends and legs
+        function buildPressureVessel(x, z, radius, height, material, withLegs = true) {
+            const vessel = new THREE.Group();
+            vessel.position.set(x, 0, z);
 
-            createMiniTank(startX, 0x3b82f6, "Clarifier");
-            createMiniTank(startX + spacing*1, 0x64748b, "MMF");
-            createMiniTank(startX + spacing*2, 0x1e293b, "ACF");
-            createMiniTank(startX + spacing*3, 0xf59e0b, "Softener");
-            createMiniTank(startX + spacing*4, 0xe2e8f0, "UF");
-            createMiniTank(startX + spacing*5, 0x94a3b8, "RO");
-            createMiniTank(startX + spacing*6, 0x10b981, "Mixed Bed");
-            
-            camera.position.set(0, 6, 15);
-        }
+            // Cylinder Body
+            const bodyGeo = new THREE.CylinderGeometry(radius, radius, height, 32);
+            const body = new THREE.Mesh(bodyGeo, material);
+            body.position.y = height/2 + (withLegs ? 1.5 : 0);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            vessel.add(body);
 
-        function buildClarifier() {
-            // Outer Tank
-            const outerGeo = new THREE.CylinderGeometry(3, 3, 4, 32);
-            const outer = new THREE.Mesh(outerGeo, glassMat);
-            currentModel.add(outer);
+            // Top Dome
+            const domeGeo = new THREE.SphereGeometry(radius, 32, 16, 0, Math.PI * 2, 0, Math.PI/2);
+            const topDome = new THREE.Mesh(domeGeo, material);
+            topDome.position.y = height + (withLegs ? 1.5 : 0);
+            topDome.scale.y = 0.5; // Flatten to torispherical shape
+            vessel.add(topDome);
 
-            // Water inside
-            const waterGeo = new THREE.CylinderGeometry(2.9, 2.9, 3.5, 32);
-            const water = new THREE.Mesh(waterGeo, waterMat);
-            water.position.y = -0.2;
-            currentModel.add(water);
-
-            // Center Well
-            const centerGeo = new THREE.CylinderGeometry(0.5, 0.5, 3, 32);
-            const center = new THREE.Mesh(centerGeo, solidSteel);
-            center.position.y = 1;
-            currentModel.add(center);
-
-            // Bottom Cone (Sludge Hopper)
-            const coneGeo = new THREE.ConeGeometry(3, 1.5, 32);
-            const cone = new THREE.Mesh(coneGeo, glassMat);
-            cone.rotation.x = Math.PI;
-            cone.position.y = -2.75;
-            currentModel.add(cone);
-
-            // Scraper (Arm)
-            const armGeo = new THREE.BoxGeometry(5.8, 0.2, 0.2);
-            const arm = new THREE.Mesh(armGeo, solidSteel);
-            arm.position.y = -1.9;
-            currentModel.add(arm);
-            
-            // Animation reference
-            currentModel.userData.animate = () => {
-                arm.rotation.y += 0.01;
-            };
-            camera.position.set(0, 4, 10);
-        }
-
-        function createFilterVessel(layers) {
-            // Tank Body
-            const bodyGeo = new THREE.CylinderGeometry(2, 2, 6, 32);
-            const body = new THREE.Mesh(bodyGeo, glassMat);
-            
-            const topDomeGeo = new THREE.SphereGeometry(2, 32, 16, 0, Math.PI * 2, 0, Math.PI/2);
-            const topDome = new THREE.Mesh(topDomeGeo, glassMat);
-            topDome.position.y = 3;
-            
-            const botDomeGeo = new THREE.SphereGeometry(2, 32, 16, 0, Math.PI * 2, 0, Math.PI/2);
-            const botDome = new THREE.Mesh(botDomeGeo, glassMat);
+            // Bottom Dome
+            const botDome = new THREE.Mesh(domeGeo, material);
             botDome.rotation.x = Math.PI;
-            botDome.position.y = -3;
+            botDome.position.y = (withLegs ? 1.5 : 0);
+            botDome.scale.y = 0.5;
+            vessel.add(botDome);
 
-            currentModel.add(body);
-            currentModel.add(topDome);
-            currentModel.add(botDome);
+            // Support Legs
+            if(withLegs) {
+                for(let i=0; i<4; i++) {
+                    const legGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 8);
+                    const leg = new THREE.Mesh(legGeo, steelMat);
+                    const angle = (Math.PI / 2) * i;
+                    leg.position.set(Math.cos(angle) * (radius - 0.2), 0.75, Math.sin(angle) * (radius - 0.2));
+                    leg.castShadow = true;
+                    vessel.add(leg);
+                }
+            }
+            return vessel;
+        }
 
-            // Particles for layers
-            let currentY = 1.5;
+        // Creates particle layers inside cutaway tanks
+        function fillFilterMedia(parentGroup, radius, baseHeight, layers) {
+            let currentY = baseHeight;
             layers.forEach(layer => {
-                const height = layer.height;
+                const height = layer.h;
                 const geo = new THREE.BufferGeometry();
-                const count = layer.density;
+                const count = layer.qty;
                 const pos = new Float32Array(count * 3);
                 
                 for(let i=0; i<count*3; i+=3) {
-                    const r = 1.9 * Math.sqrt(Math.random());
+                    const r = (radius - 0.1) * Math.sqrt(Math.random());
                     const theta = Math.random() * 2 * Math.PI;
                     pos[i] = r * Math.cos(theta); // x
-                    pos[i+1] = (Math.random() * height) + (currentY - height); // y
+                    pos[i+1] = (Math.random() * height) + currentY; // y
                     pos[i+2] = r * Math.sin(theta); // z
                 }
                 geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                const mat = new THREE.PointsMaterial({ color: layer.color, size: layer.size });
+                const mat = new THREE.PointsMaterial({ color: layer.c, size: layer.s });
                 const points = new THREE.Points(geo, mat);
-                currentModel.add(points);
-                
-                currentY -= height;
+                parentGroup.add(points);
+                currentY += height;
             });
-            camera.position.set(0, 2, 12);
+        }
+
+        // --- 6. SPECIFIC MODULE BUILDERS ---
+
+        function buildPlantMacro() {
+            // Build a Skid Platform
+            const skidGeo = new THREE.BoxGeometry(22, 0.5, 6);
+            const skid = new THREE.Mesh(skidGeo, darkSteelMat);
+            skid.position.set(0, 0.25, 0);
+            skid.receiveShadow = true;
+            skid.castShadow = true;
+            currentGroup.add(skid);
+
+            // Miniaturized Plant Layout on the Skid
+            const tanks = [
+                {x: -9, color: steelMat, type: 'clarifier'},
+                {x: -5, color: steelMat, type: 'vessel'},
+                {x: -1, color: steelMat, type: 'vessel'},
+                {x: 3, color: steelMat, type: 'vessel'},
+                {x: 7, color: pvcMat, type: 'ro_skid'}
+            ];
+
+            tanks.forEach(t => {
+                if(t.type === 'clarifier') {
+                    const clarifier = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 2, 32), t.color);
+                    clarifier.position.set(t.x, 1.5, 0);
+                    clarifier.castShadow = true;
+                    currentGroup.add(clarifier);
+                } else if(t.type === 'vessel') {
+                    const v = buildPressureVessel(t.x, 0, 1.2, 3, t.color, true);
+                    v.position.y = 0.5; // on top of skid
+                    currentGroup.add(v);
+                } else {
+                    const ro = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 2), t.color);
+                    ro.position.set(t.x, 2, 0);
+                    ro.castShadow = true;
+                    currentGroup.add(ro);
+                }
+                
+                // Main Header Pipe
+                if(t.x > -9) {
+                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 4, 16), pvcMat);
+                    pipe.rotation.z = Math.PI / 2;
+                    pipe.position.set(t.x - 2, 0.8, 1.5);
+                    pipe.castShadow = true;
+                    currentGroup.add(pipe);
+                }
+            });
+
+            camera.position.set(0, 8, 20);
+            controls.target.set(0, 2, 0);
+        }
+
+        function buildClarifier() {
+            // Cutaway style tank
+            const tank = new THREE.Group();
+            
+            // Outer wall (Glass for visibility)
+            const wall = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 5, 64, 1, true, 0, Math.PI*1.5), glassMat);
+            wall.position.y = 2.5;
+            tank.add(wall);
+
+            const solidWall = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 5, 64, 1, true, Math.PI*1.5, Math.PI*0.5), steelMat);
+            solidWall.position.y = 2.5;
+            solidWall.castShadow = true;
+            tank.add(solidWall);
+
+            // Water
+            const water = new THREE.Mesh(new THREE.CylinderGeometry(3.9, 3.9, 4.5, 32), waterMat);
+            water.position.y = 2.25;
+            tank.add(water);
+
+            // Center Well (Steel)
+            const well = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 3, 32), steelMat);
+            well.position.y = 3.5;
+            tank.add(well);
+
+            // Bridge / Motor Platform
+            const bridge = new THREE.Mesh(new THREE.BoxGeometry(9, 0.2, 1), steelMat);
+            bridge.position.y = 5.1;
+            bridge.castShadow = true;
+            tank.add(bridge);
+
+            // Scraper mechanism
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 5, 16), steelMat);
+            shaft.position.y = 2.5;
+            tank.add(shaft);
+
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.2, 0.4), darkSteelMat);
+            arm.position.y = 0.2;
+            tank.add(arm);
+
+            currentGroup.add(tank);
+            
+            // Animation logic
+            currentGroup.userData.animate = () => {
+                shaft.rotation.y += 0.005;
+                arm.rotation.y += 0.005;
+            };
+
+            camera.position.set(6, 8, 10);
+            controls.target.set(0, 2.5, 0);
+        }
+
+        function buildFilterTemplate(layersDesc) {
+            // Build Glass Cutaway Vessel
+            const vessel = buildPressureVessel(0, 0, 2.5, 6, glassMat, true);
+            
+            // Add Manifold Front Piping (AutoCAD Style)
+            const pipeGeo = new THREE.CylinderGeometry(0.2, 0.2, 5, 16);
+            const inPipe = new THREE.Mesh(pipeGeo, pvcMat);
+            inPipe.position.set(3, 4, 0);
+            inPipe.castShadow = true;
+            vessel.add(inPipe);
+
+            const outPipe = new THREE.Mesh(pipeGeo, pvcMat);
+            outPipe.position.set(3.5, 4, 0);
+            outPipe.castShadow = true;
+            vessel.add(outPipe);
+            
+            // Add media particles
+            fillFilterMedia(vessel, 2.5, 2.0, layersDesc);
+            
+            currentGroup.add(vessel);
+            camera.position.set(0, 5, 12);
+            controls.target.set(0, 4, 0);
         }
 
         function buildMMF() {
-            createFilterVessel([
-                { height: 1.5, color: 0x111111, size: 0.08, density: 1500 }, // Anthracite
-                { height: 1.5, color: 0xdfb064, size: 0.05, density: 3000 }, // Sand
-                { height: 0.8, color: 0x8b0000, size: 0.03, density: 2000 }, // Garnet
-                { height: 1.2, color: 0x64748b, size: 0.1, density: 800 }    // Gravel
+            buildFilterTemplate([
+                { h: 1.5, c: 0x64748b, s: 0.15, qty: 1000 }, // Gravel
+                { h: 0.8, c: 0x8b0000, s: 0.04, qty: 2000 }, // Garnet
+                { h: 1.5, c: 0xd4a373, s: 0.06, qty: 4000 }, // Sand
+                { h: 1.5, c: 0x111111, s: 0.09, qty: 3000 }  // Anthracite
             ]);
         }
 
         function buildACF() {
-            createFilterVessel([
-                { height: 4.0, color: 0x050505, size: 0.06, density: 5000 }, // Active Carbon
-                { height: 1.0, color: 0x64748b, size: 0.1, density: 600 }    // Gravel
+            buildFilterTemplate([
+                { h: 1.5, c: 0x64748b, s: 0.15, qty: 1000 }, // Gravel
+                { h: 4.5, c: 0x050505, s: 0.07, qty: 8000 }  // Carbon
             ]);
         }
 
         function buildSoftener() {
-            createFilterVessel([
-                { height: 4.0, color: 0xd97706, size: 0.05, density: 4000 }, // Cation Resin (Orange)
-                { height: 1.0, color: 0x64748b, size: 0.1, density: 600 }    // Gravel
+            buildFilterTemplate([
+                { h: 1.5, c: 0x64748b, s: 0.15, qty: 1000 }, // Gravel
+                { h: 4.5, c: 0xd97706, s: 0.06, qty: 8000 }  // Cation Resin
             ]);
         }
 
         function buildUF() {
-            // Main Module Tube
-            const tube = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 6, 32), glassMat);
-            currentModel.add(tube);
-            
-            // Fibers inside
-            const fiberMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
-            for(let i=0; i<50; i++) {
-                const fiber = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 8), fiberMat);
-                const r = 1.3 * Math.sqrt(Math.random());
-                const theta = Math.random() * 2 * Math.PI;
-                fiber.position.set(r * Math.cos(theta), 0, r * Math.sin(theta));
-                currentModel.add(fiber);
+            const skid = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 3), darkSteelMat);
+            skid.position.y = 0.1;
+            currentGroup.add(skid);
+
+            // Vertical Hollow Fiber Modules
+            for(let i=0; i<3; i++) {
+                const module = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 6, 32), glassMat);
+                module.position.set(-1 + i, 3.1, 0);
+                
+                // Fibers inside
+                for(let f=0; f<20; f++) {
+                    const fiber = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 6, 8), new THREE.MeshStandardMaterial({color: 0xffffff}));
+                    const r = 0.3 * Math.sqrt(Math.random());
+                    const theta = Math.random() * 2 * Math.PI;
+                    fiber.position.set(r * Math.cos(theta), 0, r * Math.sin(theta));
+                    module.add(fiber);
+                }
+                currentGroup.add(module);
             }
-            camera.position.set(0, 2, 10);
+            camera.position.set(0, 5, 10);
+            controls.target.set(0, 3, 0);
         }
 
         function buildRO() {
-            // Horizontal RO Pressure Vessel
-            const vesselGeo = new THREE.CylinderGeometry(1.2, 1.2, 8, 32);
-            const vessel = new THREE.Mesh(vesselGeo, glassMat);
-            vessel.rotation.z = Math.PI / 2;
-            currentModel.add(vessel);
+            const skid = new THREE.Mesh(new THREE.BoxGeometry(8, 0.5, 4), darkSteelMat);
+            skid.position.y = 0.25;
+            currentGroup.add(skid);
 
-            // Permeate Tube (Center)
-            const permeateGeo = new THREE.CylinderGeometry(0.15, 0.15, 8.2, 16);
-            const permeate = new THREE.Mesh(permeateGeo, new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
-            permeate.rotation.z = Math.PI / 2;
-            currentModel.add(permeate);
+            // High Pressure RO Vessels (Horizontal)
+            for(let i=0; i<4; i++) {
+                const vessel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 7, 32), glassMat);
+                vessel.rotation.z = Math.PI / 2;
+                vessel.position.set(0, 1.5 + (i * 1.2), 0);
+                vessel.castShadow = true;
 
-            // Spiral Layers (Representation)
-            const wrapMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
-            for(let r=0.3; r<1.1; r+=0.15) {
-                const layer = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 7.8, 32, 1, true), wrapMat);
-                layer.rotation.z = Math.PI / 2;
-                currentModel.add(layer);
+                // Center Permeate Tube
+                const permeate = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 7.2, 16), new THREE.MeshStandardMaterial({color: 0x00a8ff}));
+                vessel.add(permeate);
+
+                // Membrane Spirals
+                const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 6.8, 32), new THREE.MeshStandardMaterial({color: 0xe2e8f0, wireframe: true}));
+                vessel.add(wrap);
+
+                currentGroup.add(vessel);
             }
-            camera.position.set(0, 2, 10);
+            camera.position.set(0, 4, 12);
+            controls.target.set(0, 3, 0);
         }
 
         function buildMixedBed() {
-            // Mixed Cation (Orange) & Anion (Yellow/White)
-            const geo = new THREE.BufferGeometry();
-            const count = 4000;
-            const pos = new Float32Array(count * 3);
-            const colors = new Float32Array(count * 3);
+            // Mixed colored particles
+            buildFilterTemplate([
+                { h: 1.5, c: 0x64748b, s: 0.15, qty: 1000 },
+                { h: 4.5, c: 0xffffff, s: 0.06, qty: 8000 } // Will override color in specific loop
+            ]);
             
-            const color1 = new THREE.Color(0xd97706); // Cation
-            const color2 = new THREE.Color(0xfde047); // Anion
-
-            for(let i=0; i<count; i++) {
-                const r = 1.9 * Math.sqrt(Math.random());
-                const theta = Math.random() * 2 * Math.PI;
-                pos[i*3] = r * Math.cos(theta);
-                pos[i*3+1] = (Math.random() * 4) - 2; 
-                pos[i*3+2] = r * Math.sin(theta);
-
-                const c = Math.random() > 0.5 ? color1 : color2;
-                colors[i*3] = c.r;
-                colors[i*3+1] = c.g;
-                colors[i*3+2] = c.b;
+            // Override the top layer with mixed colors (Orange/Yellow)
+            const resinLayer = currentGroup.children[0].children[currentGroup.children[0].children.length - 1];
+            const colors = new Float32Array(8000 * 3);
+            const c1 = new THREE.Color(0xd97706);
+            const c2 = new THREE.Color(0xfde047);
+            for(let i=0; i<8000; i++) {
+                const c = Math.random() > 0.5 ? c1 : c2;
+                colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
             }
-            
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            
-            const mat = new THREE.PointsMaterial({ size: 0.06, vertexColors: true });
-            const points = new THREE.Points(geo, mat);
-            
-            // Add Vessel
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 6, 32), glassMat);
-            currentModel.add(body);
-            currentModel.add(points);
-            camera.position.set(0, 2, 12);
+            resinLayer.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            resinLayer.material.vertexColors = true;
+            resinLayer.material.color = new THREE.Color(0xffffff); // reset base color
         }
 
-        // --- Logic UI ---
+        // --- 7. UI LOGIC & INITIALIZATION ---
         function loadStage(id) {
-            // Update UI
+            // Setup UI Active State
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + id).classList.add('active');
             
             const data = wtpData.find(d => d.id === id);
             document.getElementById('p-title').innerHTML = data.title;
+            document.getElementById('p-badge').innerHTML = data.badge;
             document.getElementById('p-desc').innerHTML = data.desc;
             
             if(id === 0) {
@@ -514,12 +699,11 @@
                 document.getElementById('p-mech').innerHTML = data.mech;
             }
 
-            // Update 3D
-            clearModel();
-            currentModel.userData = {}; // reset animation
+            // Render 3D Scene
+            clearScene();
             
             switch(id) {
-                case 0: buildEndToEnd(); break;
+                case 0: buildPlantMacro(); break;
                 case 1: buildClarifier(); break;
                 case 2: buildMMF(); break;
                 case 3: buildACF(); break;
@@ -530,7 +714,7 @@
             }
         }
 
-        // Init Nav
+        // Build Navigation UI
         const navContainer = document.getElementById('nav-container');
         wtpData.forEach(stage => {
             const btn = document.createElement('button');
@@ -541,24 +725,24 @@
             navContainer.appendChild(btn);
         });
 
-        // Animation Loop
+        // Main Animation Loop
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-            if(currentModel.userData.animate) {
-                currentModel.userData.animate();
+            if(currentGroup.userData.animate) {
+                currentGroup.userData.animate();
             }
             renderer.render(scene, camera);
         }
 
-        // Handle Resize
+        // Window Resize Handler
         window.addEventListener('resize', () => {
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        // Start
+        // Initialize First State
         loadStage(0);
         animate();
     </script>
