@@ -3,385 +3,564 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WTP - Interactive Structural Cutaway</title>
+    <title>3D Industrial WTP Simulation</title>
     <style>
         :root {
-            --bg-color: #f4f7fa;
-            --panel-bg: #ffffff;
-            --text-main: #2c3e50;
-            --text-muted: #64748b;
-            --accent: #3498db;
-            --accent-hover: #2980b9;
-            --water: #3498db;
-            --border: #e2e8f0;
+            --bg-dark: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #334155;
+            --danger: #ef4444;
+            --success: #10b981;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-dark);
             color: var(--text-main);
             display: flex;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* Sidebar Navigation */
-        .sidebar {
-            width: 280px;
-            background-color: var(--panel-bg);
+        /* Layout */
+        #sidebar {
+            width: 250px;
+            background: var(--panel-bg);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            padding: 20px 0;
+            z-index: 10;
+        }
+
+        #viewport {
+            flex: 1;
+            position: relative;
+        }
+
+        #info-panel {
+            width: 350px;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border);
+            padding: 20px;
             overflow-y: auto;
+            z-index: 10;
         }
 
+        /* Sidebar Nav */
         .sidebar-header {
-            padding: 0 20px 20px;
+            padding: 20px;
             border-bottom: 1px solid var(--border);
-            margin-bottom: 10px;
-        }
-
-        .sidebar-header h2 {
-            font-size: 1.2rem;
-            color: var(--text-main);
+            font-weight: bold;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .nav-btn {
             background: none;
             border: none;
+            color: var(--text-muted);
             padding: 15px 20px;
             text-align: left;
-            font-size: 1rem;
             cursor: pointer;
-            color: var(--text-muted);
             border-left: 4px solid transparent;
-            transition: all 0.2s ease;
+            transition: 0.2s;
+            font-size: 0.95rem;
         }
 
         .nav-btn:hover {
-            background-color: #f8fafc;
+            background: rgba(255,255,255,0.05);
             color: var(--text-main);
         }
 
         .nav-btn.active {
-            background-color: #eff6ff;
+            background: rgba(56, 189, 248, 0.1);
             color: var(--accent);
-            border-left: 4px solid var(--accent);
+            border-left-color: var(--accent);
             font-weight: 600;
         }
 
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .top-info {
-            background: var(--panel-bg);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            margin-bottom: 20px;
-        }
-
-        .top-info h1 {
-            font-size: 1.5rem;
+        /* Info Panel Typography */
+        h2 { font-size: 1.4rem; color: var(--accent); margin-bottom: 15px; }
+        h3 { font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin: 15px 0 5px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        p { font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px; color: #cbd5e1; }
+        
+        .io-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 10px;
             margin-bottom: 10px;
-            color: var(--accent);
+            border: 1px solid var(--border);
         }
-
-        /* Visualization Area */
-        .visual-container {
-            flex: 1;
-            background: var(--panel-bg);
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 40px;
-            position: relative;
-        }
-
-        /* Generic Tank CSS */
-        .tank-wrapper {
-            display: none;
+        
+        .io-title { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; }
+        .input-title { color: var(--accent); }
+        .output-title { color: var(--success); }
+        .reject-title { color: var(--danger); }
+        
+        .io-detail { font-size: 0.85rem; color: #e2e8f0; }
+        
+        #canvas-container {
             width: 100%;
             height: 100%;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            animation: fadeIn 0.4s ease;
+            display: block;
         }
 
-        .tank-wrapper.active {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .tank {
-            width: 250px;
-            height: 400px;
-            border: 4px solid #94a3b8;
-            border-top: none;
-            border-radius: 0 0 20px 20px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tank-lid {
-            width: 260px;
-            height: 30px;
-            background: #94a3b8;
-            border-radius: 10px 10px 0 0;
+        .overlay-instruction {
             position: absolute;
-            top: -30px;
-            left: -5px;
-        }
-
-        /* Layers inside MMF / ACF / Softener */
-        .layer {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 0.8rem;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            transition: all 0.3s;
-        }
-
-        /* Specific Stages */
-        /* 1. Clarifier */
-        .clarifier-body {
-            width: 300px;
-            height: 250px;
-            border: 4px solid #94a3b8;
-            border-top: none;
-            position: relative;
-            background: rgba(52, 152, 219, 0.2);
-            clip-path: polygon(0 0, 100% 0, 100% 60%, 60% 100%, 40% 100%, 0 60%);
-        }
-        .clarifier-center-well {
-            width: 60px;
-            height: 150px;
-            background: rgba(148, 163, 184, 0.5);
-            position: absolute;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            top: 0;
-            border-left: 2px solid #94a3b8;
-            border-right: 2px solid #94a3b8;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            color: #94a3b8;
         }
-
-        /* 2. MMF Layers */
-        .layer-water { height: 25%; background: rgba(52, 152, 219, 0.3); color: #333; text-shadow: none;}
-        .layer-anthracite { height: 25%; background: #2d3436; }
-        .layer-sand { height: 25%; background: #e1b12c; }
-        .layer-garnet { height: 10%; background: #c23616; }
-        .layer-gravel { height: 15%; background: #718093; }
-
-        /* 3. ACF Layers */
-        .layer-acf { height: 60%; background: #1e272e; }
-
-        /* 4. Softener Layers */
-        .layer-resin { height: 60%; background: #f0932b; }
-
-        /* 5. UF */
-        .uf-module {
-            width: 150px;
-            height: 400px;
-            border: 4px solid #bdc3c7;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-evenly;
-            padding: 10px 0;
-            background: #ecf0f1;
-        }
-        .uf-fiber {
-            width: 15px;
-            height: 100%;
-            background: #fff;
-            border: 1px solid #bdc3c7;
-            border-radius: 10px;
-        }
-
-        /* 6. RO */
-        .ro-module {
-            width: 350px;
-            height: 120px;
-            border: 4px solid #7f8c8d;
-            border-radius: 60px;
-            position: relative;
-            background: repeating-linear-gradient(90deg, #bdc3c7, #bdc3c7 10px, #ecf0f1 10px, #ecf0f1 20px);
-        }
-        .ro-permeate-tube {
-            width: 100%;
-            height: 20px;
-            background: var(--water);
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        /* 7. Mixed Bed */
-        .layer-mixed {
-            height: 60%;
-            background: repeating-linear-gradient(45deg, #f0932b, #f0932b 10px, #badc58 10px, #badc58 20px);
-        }
-
     </style>
+    <!-- Three.js Library & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h2>WTP Stages</h2>
-        </div>
-        <div id="nav-buttons"></div>
-    </aside>
+    <nav id="sidebar">
+        <div class="sidebar-header">WTP Simulation</div>
+        <div id="nav-container"></div>
+    </nav>
 
-    <main class="main-content">
-        <div class="top-info">
-            <h1 id="stage-title">Select a Stage</h1>
-            <p id="stage-desc" style="line-height: 1.6; color: var(--text-muted);">...</p>
-        </div>
-
-        <div class="visual-container" id="visual-container">
-            <!-- Clarifier -->
-            <div class="tank-wrapper" id="stage-1">
-                <div class="clarifier-body">
-                    <div class="clarifier-center-well">Inlet</div>
-                    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #fff; font-weight: bold;">Sludge Zone</div>
-                </div>
-            </div>
-
-            <!-- MMF -->
-            <div class="tank-wrapper" id="stage-2">
-                <div style="position:relative; margin-top: 30px;">
-                    <div class="tank-lid"></div>
-                    <div class="tank">
-                        <div class="layer layer-water">Influent Water</div>
-                        <div class="layer layer-anthracite">Anthracite (0.8 - 1.2 mm)</div>
-                        <div class="layer layer-sand">Silica Sand (0.4 - 0.8 mm)</div>
-                        <div class="layer layer-garnet">Garnet (0.2 - 0.4 mm)</div>
-                        <div class="layer layer-gravel">Gravel Support</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ACF -->
-            <div class="tank-wrapper" id="stage-3">
-                <div style="position:relative; margin-top: 30px;">
-                    <div class="tank-lid"></div>
-                    <div class="tank">
-                        <div class="layer layer-water">Filtered Water</div>
-                        <div class="layer layer-acf">Activated Carbon Bed (Micropores)</div>
-                        <div class="layer layer-gravel">Gravel Support</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Softener -->
-            <div class="tank-wrapper" id="stage-4">
-                <div style="position:relative; margin-top: 30px;">
-                    <div class="tank-lid"></div>
-                    <div class="tank">
-                        <div class="layer layer-water">De-chlorinated Water</div>
-                        <div class="layer layer-resin">Cation Resin (Na+ Form)</div>
-                        <div class="layer layer-gravel">Gravel Support</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- UF -->
-            <div class="tank-wrapper" id="stage-5">
-                <div class="uf-module">
-                    <div class="uf-fiber"></div><div class="uf-fiber"></div>
-                    <div class="uf-fiber"></div><div class="uf-fiber"></div>
-                    <div class="uf-fiber"></div><div class="uf-fiber"></div>
-                </div>
-                <p style="margin-top: 20px; color: var(--text-muted); font-weight: bold;">Hollow Fiber Membrane (0.01 μm)</p>
-            </div>
-
-            <!-- RO -->
-            <div class="tank-wrapper" id="stage-6">
-                <div class="ro-module">
-                    <div class="ro-permeate-tube"></div>
-                </div>
-                <p style="margin-top: 20px; color: var(--text-muted); font-weight: bold;">Spiral Wound Membrane (0.0001 μm)</p>
-            </div>
-
-            <!-- Mixed Bed -->
-            <div class="tank-wrapper" id="stage-7">
-                <div style="position:relative; margin-top: 30px;">
-                    <div class="tank-lid"></div>
-                    <div class="tank">
-                        <div class="layer layer-water">RO Permeate</div>
-                        <div class="layer layer-mixed">Mixed Cation (H+) & Anion (OH-) Resin</div>
-                        <div class="layer layer-gravel">Gravel Support</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <main id="viewport">
+        <div id="canvas-container"></div>
+        <div class="overlay-instruction">Klik dan geser untuk memutar 3D. Scroll untuk Zoom.</div>
     </main>
 
+    <aside id="info-panel">
+        <h2 id="p-title">Sistem WTP</h2>
+        <p id="p-desc">Pilih tahapan di menu sebelah kiri untuk melihat detail struktural, spesifikasi input, output, dan parameter operasional.</p>
+        
+        <div id="p-details" style="display: none;">
+            <h3>Input (Masukan)</h3>
+            <div class="io-box">
+                <div class="io-title input-title">Air Umpan & Material Kimia</div>
+                <div class="io-detail" id="p-input">...</div>
+            </div>
+
+            <h3>Output (Hasil)</h3>
+            <div class="io-box">
+                <div class="io-title output-title">Air Terolah (Product)</div>
+                <div class="io-detail" id="p-output">...</div>
+            </div>
+
+            <h3>Reject / Limbah</h3>
+            <div class="io-box">
+                <div class="io-title reject-title">Limbah Buangan (Waste)</div>
+                <div class="io-detail" id="p-reject">...</div>
+            </div>
+
+            <h3>Mekanisme Internal</h3>
+            <p id="p-mech" style="font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;"></p>
+        </div>
+    </aside>
+
     <script>
-        const stages = [
-            { id: 1, name: "1. Clarifier", title: "Clarifier (Bak Pengendap)", desc: "Pemisahan fisik menggunakan gaya gravitasi. Air yang telah dikoagulasi dialirkan sangat lambat agar flok (gumpalan partikel) mengendap ke zona lumpur di dasar tangki, sementara air jernih meluap ke atas." },
-            { id: 2, name: "2. Multimedia Filter", title: "Multimedia Filter (MMF)", desc: "Air mengalir dari atas ke bawah melewati media bergradasi. Antrasit menahan partikel besar, pasir silika menahan partikel sedang, dan garnet menangkap suspensi terhalus yang lolos dari clarifier." },
-            { id: 3, name: "3. Activated Carbon Filter", title: "Activated Carbon Filter (ACF)", desc: "Karbon aktif tidak bekerja memfilter secara fisik, melainkan menyerap (adsorpsi) zat organik, warna, bau, dan mengikat molekul Klorin bebas agar tidak merusak polimer membran RO di tahap selanjutnya." },
-            { id: 4, name: "4. Softener", title: "Ion Exchange Softener", desc: "Berisi butiran resin kation. Ion kesadahan (Kalsium dan Magnesium) yang menyebabkan kerak ditangkap oleh resin, dan ditukar dengan ion Sodium (Na+) yang larut dengan aman ke dalam air." },
-            { id: 5, name: "5. Ultrafiltration", title: "Ultrafiltration (UF) Membrane", desc: "Modul membran hollow fiber (0.01 mikron). Aliran cross-flow menyaring koloid silika, bakteri, dan molekul makro untuk menurunkan nilai SDI sebelum masuk ke pompa tekanan tinggi RO." },
-            { id: 6, name: "6. Reverse Osmosis", title: "Reverse Osmosis (RO) System", desc: "Tekanan sangat tinggi memaksa molekul air menembus pori 0.0001 mikron dari gulungan membran spiral. RO merejeksi hingga 99% mineral terlarut, garam, dan logam berat yang terbuang sebagai Brine." },
-            { id: 7, name: "7. Mixed Bed", title: "Mixed Bed Demineralizer", desc: "Tahap pemurnian akhir. Menggunakan campuran homogen resin kation (mengikat sisa logam, melepas H+) dan anion (mengikat sisa non-logam, melepas OH-). H+ dan OH- bereaksi instan menjadi molekul H2O murni." }
+        // Data Spesifikasi End-to-End WTP
+        const wtpData = [
+            {
+                id: 0, name: "End-to-End Plant", title: "Sistem End-to-End WTP",
+                desc: "Rangkaian lengkap Water Treatment Plant dari raw water hingga ultra-pure water.",
+                input: "Air Baku (Raw Water) dari sungai/sumur dalam.",
+                output: "Demineralized Water (Air Bebas Mineral) < 0.1 µS/cm.",
+                reject: "Sludge, Air Backwash, RO Brine, Limbah Asam/Basa.",
+                mech: "Air dipompa melewati pemisahan fisik (Clarifier, MMF), pemisahan kimia/adsorpsi (ACF, Softener), hingga pemisahan membran tingkat molekuler (UF, RO) dan pertukaran ion (Mixed Bed)."
+            },
+            {
+                id: 1, name: "1. Clarifier", title: "Clarifier (Pengendap)",
+                desc: "Pemisahan fisik awal menggunakan gaya gravitasi dan koagulasi.",
+                input: "• Raw Water (TSS tinggi)<br>• Koagulan (PAC / Tawas)<br>• Flokulan (Polymer)",
+                output: "• Clarified Water (< 5 NTU)",
+                reject: "• Sludge / Lumpur Padat (Dibuang via bottom scraper ke Sludge Holding Tank)",
+                mech: "Bahan kimia mendestabilisasi muatan kotoran sehingga saling mengikat membentuk flok. Kecepatan aliran air ke atas (upflow) dijaga lebih rendah dari kecepatan jatuhnya flok ke bawah."
+            },
+            {
+                id: 2, name: "2. Multimedia Filter", title: "Multimedia Filter (MMF)",
+                desc: "Penyaringan mekanis sisa tersuspensi menggunakan media bergradasi.",
+                input: "• Clarified Water (pompa tekanan rendah)",
+                output: "• Filtered Water (SDI < 5, Turbidity < 1 NTU)",
+                reject: "• Backwash Waste (Air cucian kotor sarat partikel)",
+                mech: "Air mengalir ke bawah (downflow). Lapisan Antrasit (kasar) di atas menahan kotoran makro, Pasir Silika (menengah) di tengah, dan Garnet (sangat halus) di bawah menahan sisa partikel. Dicuci berkala (backwash) dengan membalik aliran air ke atas."
+            },
+            {
+                id: 3, name: "3. Activated Carbon", title: "Activated Carbon Filter (ACF)",
+                desc: "Adsorpsi bahan kimia organik dan perlindungan membran dari Klorin.",
+                input: "• Filtered Water<br>• Klorin bebas (dari klorinasi awal)",
+                output: "• De-chlorinated Water (Klorin < 0.1 ppm, bebas bau)",
+                reject: "• Backwash Waste (Hanya debu karbon, klorin terikat permanen)",
+                mech: "Bukan penyaring fisik. Luas permukaan pori-pori mikroskopis karbon aktif menarik dan mengikat molekul organik, warna, bau, serta mereduksi Klorin menjadi klorida yang aman bagi polimer RO."
+            },
+            {
+                id: 4, name: "4. Softener", title: "Ion Exchange Softener",
+                desc: "Pelunakan air dari kalsium dan magnesium penyebab kerak boiler/membran.",
+                input: "• De-chlorinated Water (Tinggi Kesadahan / Hardness)<br>• NaCl (Garam dapur untuk Regenerasi)",
+                output: "• Soft Water (Hardness mendekati 0 ppm)",
+                reject: "• Limbah CaCl2 & MgCl2 (Hasil cucian buangan saat regenerasi)",
+                mech: "Resin Kation bermuatan Sodium (Na+). Saat air masuk, ion Ca2+ dan Mg2+ ditarik menempel pada resin, menggeser ion Na+ keluar bersama air. Regenerasi dilakukan dengan merendam resin dalam air garam pekat."
+            },
+            {
+                id: 5, name: "5. Ultrafiltration", title: "Ultrafiltration (UF)",
+                desc: "Filtrasi cross-flow skala 0.01 mikron untuk memutus koloid dan patogen.",
+                input: "• Soft Water",
+                output: "• UF Permeate (SDI < 3, Bebas Bakteri)",
+                reject: "• UF Reject (Konsentrat aliran permukaan) & Air Backwash harian",
+                mech: "Air didorong masuk ke dalam ribuan pipa serat berongga (hollow fiber). Air murni menembus dinding serat ke arah luar, sementara koloid dan bakteri tertahan di dalam tabung dan didorong ke saluran pembuangan."
+            },
+            {
+                id: 6, name: "6. Reverse Osmosis", title: "Reverse Osmosis (RO)",
+                desc: "Pemisahan molekuler melawan osmosis alami menggunakan tekanan tinggi.",
+                input: "• UF Permeate<br>• Antiscalant (Injeksi anti-kerak)<br>• Tekanan Tinggi (10 - 25 Bar)",
+                output: "• RO Permeate (TDS < 10 ppm, Konduktivitas sangat rendah)",
+                reject: "• RO Brine / Concentrate (Air buangan dengan konsentrasi garam dan TDS yang sangat pekat)",
+                mech: "Air dipaksa menembus membran 0.0001 mikron. Membran spiral-wound menolak hingga 99% ion mineral terlarut (TDS), membiarkan hanya H2O yang lewat."
+            },
+            {
+                id: 7, name: "7. Mixed Bed", title: "Mixed Bed Demineralizer",
+                desc: "Pemurnian absolut (polishing) untuk air umpan boiler turbin uap.",
+                input: "• RO Permeate<br>• HCl (Asam Kuat untuk regen Kation)<br>• NaOH (Basa Kuat untuk regen Anion)",
+                output: "• Ultrapure / Demineralized Water (Konduktivitas < 0.1 µS/cm)",
+                reject: "• Limbah Asam & Basa (Sisa regenerasi kimiawi)",
+                mech: "Campuran homogen antara Resin Kation (H+) dan Resin Anion (OH-). Sisa kation logam diikat dan ditukar dengan H+, sisa anion non-logam ditukar OH-. Keduanya bergabung instan menjadi H2O. Karena dicampur, reaksi ini terjadi ribuan kali berlapis-lapis."
+            }
         ];
 
-        const navContainer = document.getElementById('nav-buttons');
-        const titleEl = document.getElementById('stage-title');
-        const descEl = document.getElementById('stage-desc');
-        const wrappers = document.querySelectorAll('.tank-wrapper');
+        // --- Three.js Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
 
-        function selectStage(id) {
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`btn-${id}`).classList.add('active');
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 5, 12);
 
-            const stageData = stages.find(s => s.id === id);
-            titleEl.textContent = stageData.title;
-            descEl.textContent = stageData.desc;
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
 
-            wrappers.forEach(w => w.classList.remove('active'));
-            document.getElementById(`stage-${id}`).classList.add('active');
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        // Group to hold current 3D Model
+        let currentModel = new THREE.Group();
+        scene.add(currentModel);
+
+        // Common Materials
+        const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x88ccff, transparent: true, opacity: 0.2, roughness: 0.1, transmission: 0.9, thickness: 0.5 });
+        const solidSteel = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4, metalness: 0.6 });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+
+        // Helper function to clear scene
+        function clearModel() {
+            while(currentModel.children.length > 0){ 
+                currentModel.remove(currentModel.children[0]); 
+            }
         }
 
-        stages.forEach(stage => {
+        // --- 3D Builders ---
+        function buildEndToEnd() {
+            // A miniature sequence of tanks
+            const spacing = 2.5;
+            const startX = -7.5;
+            
+            const createMiniTank = (x, color, label) => {
+                const geo = new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
+                const mat = new THREE.MeshStandardMaterial({ color: color });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, 1, 0);
+                currentModel.add(mesh);
+                
+                // Connecting Pipe
+                if(x > startX) {
+                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, spacing, 8), solidSteel);
+                    pipe.rotation.z = Math.PI / 2;
+                    pipe.position.set(x - spacing/2, 0.2, 0);
+                    currentModel.add(pipe);
+                }
+            };
+
+            createMiniTank(startX, 0x3b82f6, "Clarifier");
+            createMiniTank(startX + spacing*1, 0x64748b, "MMF");
+            createMiniTank(startX + spacing*2, 0x1e293b, "ACF");
+            createMiniTank(startX + spacing*3, 0xf59e0b, "Softener");
+            createMiniTank(startX + spacing*4, 0xe2e8f0, "UF");
+            createMiniTank(startX + spacing*5, 0x94a3b8, "RO");
+            createMiniTank(startX + spacing*6, 0x10b981, "Mixed Bed");
+            
+            camera.position.set(0, 6, 15);
+        }
+
+        function buildClarifier() {
+            // Outer Tank
+            const outerGeo = new THREE.CylinderGeometry(3, 3, 4, 32);
+            const outer = new THREE.Mesh(outerGeo, glassMat);
+            currentModel.add(outer);
+
+            // Water inside
+            const waterGeo = new THREE.CylinderGeometry(2.9, 2.9, 3.5, 32);
+            const water = new THREE.Mesh(waterGeo, waterMat);
+            water.position.y = -0.2;
+            currentModel.add(water);
+
+            // Center Well
+            const centerGeo = new THREE.CylinderGeometry(0.5, 0.5, 3, 32);
+            const center = new THREE.Mesh(centerGeo, solidSteel);
+            center.position.y = 1;
+            currentModel.add(center);
+
+            // Bottom Cone (Sludge Hopper)
+            const coneGeo = new THREE.ConeGeometry(3, 1.5, 32);
+            const cone = new THREE.Mesh(coneGeo, glassMat);
+            cone.rotation.x = Math.PI;
+            cone.position.y = -2.75;
+            currentModel.add(cone);
+
+            // Scraper (Arm)
+            const armGeo = new THREE.BoxGeometry(5.8, 0.2, 0.2);
+            const arm = new THREE.Mesh(armGeo, solidSteel);
+            arm.position.y = -1.9;
+            currentModel.add(arm);
+            
+            // Animation reference
+            currentModel.userData.animate = () => {
+                arm.rotation.y += 0.01;
+            };
+            camera.position.set(0, 4, 10);
+        }
+
+        function createFilterVessel(layers) {
+            // Tank Body
+            const bodyGeo = new THREE.CylinderGeometry(2, 2, 6, 32);
+            const body = new THREE.Mesh(bodyGeo, glassMat);
+            
+            const topDomeGeo = new THREE.SphereGeometry(2, 32, 16, 0, Math.PI * 2, 0, Math.PI/2);
+            const topDome = new THREE.Mesh(topDomeGeo, glassMat);
+            topDome.position.y = 3;
+            
+            const botDomeGeo = new THREE.SphereGeometry(2, 32, 16, 0, Math.PI * 2, 0, Math.PI/2);
+            const botDome = new THREE.Mesh(botDomeGeo, glassMat);
+            botDome.rotation.x = Math.PI;
+            botDome.position.y = -3;
+
+            currentModel.add(body);
+            currentModel.add(topDome);
+            currentModel.add(botDome);
+
+            // Particles for layers
+            let currentY = 1.5;
+            layers.forEach(layer => {
+                const height = layer.height;
+                const geo = new THREE.BufferGeometry();
+                const count = layer.density;
+                const pos = new Float32Array(count * 3);
+                
+                for(let i=0; i<count*3; i+=3) {
+                    const r = 1.9 * Math.sqrt(Math.random());
+                    const theta = Math.random() * 2 * Math.PI;
+                    pos[i] = r * Math.cos(theta); // x
+                    pos[i+1] = (Math.random() * height) + (currentY - height); // y
+                    pos[i+2] = r * Math.sin(theta); // z
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                const mat = new THREE.PointsMaterial({ color: layer.color, size: layer.size });
+                const points = new THREE.Points(geo, mat);
+                currentModel.add(points);
+                
+                currentY -= height;
+            });
+            camera.position.set(0, 2, 12);
+        }
+
+        function buildMMF() {
+            createFilterVessel([
+                { height: 1.5, color: 0x111111, size: 0.08, density: 1500 }, // Anthracite
+                { height: 1.5, color: 0xdfb064, size: 0.05, density: 3000 }, // Sand
+                { height: 0.8, color: 0x8b0000, size: 0.03, density: 2000 }, // Garnet
+                { height: 1.2, color: 0x64748b, size: 0.1, density: 800 }    // Gravel
+            ]);
+        }
+
+        function buildACF() {
+            createFilterVessel([
+                { height: 4.0, color: 0x050505, size: 0.06, density: 5000 }, // Active Carbon
+                { height: 1.0, color: 0x64748b, size: 0.1, density: 600 }    // Gravel
+            ]);
+        }
+
+        function buildSoftener() {
+            createFilterVessel([
+                { height: 4.0, color: 0xd97706, size: 0.05, density: 4000 }, // Cation Resin (Orange)
+                { height: 1.0, color: 0x64748b, size: 0.1, density: 600 }    // Gravel
+            ]);
+        }
+
+        function buildUF() {
+            // Main Module Tube
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 6, 32), glassMat);
+            currentModel.add(tube);
+            
+            // Fibers inside
+            const fiberMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
+            for(let i=0; i<50; i++) {
+                const fiber = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 8), fiberMat);
+                const r = 1.3 * Math.sqrt(Math.random());
+                const theta = Math.random() * 2 * Math.PI;
+                fiber.position.set(r * Math.cos(theta), 0, r * Math.sin(theta));
+                currentModel.add(fiber);
+            }
+            camera.position.set(0, 2, 10);
+        }
+
+        function buildRO() {
+            // Horizontal RO Pressure Vessel
+            const vesselGeo = new THREE.CylinderGeometry(1.2, 1.2, 8, 32);
+            const vessel = new THREE.Mesh(vesselGeo, glassMat);
+            vessel.rotation.z = Math.PI / 2;
+            currentModel.add(vessel);
+
+            // Permeate Tube (Center)
+            const permeateGeo = new THREE.CylinderGeometry(0.15, 0.15, 8.2, 16);
+            const permeate = new THREE.Mesh(permeateGeo, new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+            permeate.rotation.z = Math.PI / 2;
+            currentModel.add(permeate);
+
+            // Spiral Layers (Representation)
+            const wrapMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+            for(let r=0.3; r<1.1; r+=0.15) {
+                const layer = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 7.8, 32, 1, true), wrapMat);
+                layer.rotation.z = Math.PI / 2;
+                currentModel.add(layer);
+            }
+            camera.position.set(0, 2, 10);
+        }
+
+        function buildMixedBed() {
+            // Mixed Cation (Orange) & Anion (Yellow/White)
+            const geo = new THREE.BufferGeometry();
+            const count = 4000;
+            const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            
+            const color1 = new THREE.Color(0xd97706); // Cation
+            const color2 = new THREE.Color(0xfde047); // Anion
+
+            for(let i=0; i<count; i++) {
+                const r = 1.9 * Math.sqrt(Math.random());
+                const theta = Math.random() * 2 * Math.PI;
+                pos[i*3] = r * Math.cos(theta);
+                pos[i*3+1] = (Math.random() * 4) - 2; 
+                pos[i*3+2] = r * Math.sin(theta);
+
+                const c = Math.random() > 0.5 ? color1 : color2;
+                colors[i*3] = c.r;
+                colors[i*3+1] = c.g;
+                colors[i*3+2] = c.b;
+            }
+            
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const mat = new THREE.PointsMaterial({ size: 0.06, vertexColors: true });
+            const points = new THREE.Points(geo, mat);
+            
+            // Add Vessel
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 6, 32), glassMat);
+            currentModel.add(body);
+            currentModel.add(points);
+            camera.position.set(0, 2, 12);
+        }
+
+        // --- Logic UI ---
+        function loadStage(id) {
+            // Update UI
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + id).classList.add('active');
+            
+            const data = wtpData.find(d => d.id === id);
+            document.getElementById('p-title').innerHTML = data.title;
+            document.getElementById('p-desc').innerHTML = data.desc;
+            
+            if(id === 0) {
+                document.getElementById('p-details').style.display = 'none';
+            } else {
+                document.getElementById('p-details').style.display = 'block';
+                document.getElementById('p-input').innerHTML = data.input;
+                document.getElementById('p-output').innerHTML = data.output;
+                document.getElementById('p-reject').innerHTML = data.reject;
+                document.getElementById('p-mech').innerHTML = data.mech;
+            }
+
+            // Update 3D
+            clearModel();
+            currentModel.userData = {}; // reset animation
+            
+            switch(id) {
+                case 0: buildEndToEnd(); break;
+                case 1: buildClarifier(); break;
+                case 2: buildMMF(); break;
+                case 3: buildACF(); break;
+                case 4: buildSoftener(); break;
+                case 5: buildUF(); break;
+                case 6: buildRO(); break;
+                case 7: buildMixedBed(); break;
+            }
+        }
+
+        // Init Nav
+        const navContainer = document.getElementById('nav-container');
+        wtpData.forEach(stage => {
             const btn = document.createElement('button');
             btn.className = 'nav-btn';
-            btn.id = `btn-${stage.id}`;
-            btn.textContent = stage.name;
-            btn.onclick = () => selectStage(stage.id);
+            btn.id = 'btn-' + stage.id;
+            btn.innerText = stage.name;
+            btn.onclick = () => loadStage(stage.id);
             navContainer.appendChild(btn);
         });
 
-        // Init first stage
-        selectStage(1);
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if(currentModel.userData.animate) {
+                currentModel.userData.animate();
+            }
+            renderer.render(scene, camera);
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Start
+        loadStage(0);
+        animate();
     </script>
 </body>
 </html>
