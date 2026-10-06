@@ -3,246 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Grade 3D WTP - Kation Anion Included</title>
+    <title>Digital Twin WTP - Ultimate Edition</title>
     <style>
         :root {
-            --bg-main: #060913;
-            --panel-bg: rgba(9, 14, 23, 0.9);
-            --panel-border: #1a2a40;
-            --text-main: #e2e8f0;
-            --text-muted: #64748b;
-            --accent: #00d2ff;
-            --accent-glow: rgba(0, 210, 255, 0.5);
-            --danger: #ff4757;
-            --success: #2ed573;
-            --warning: #feca57;
-            --purple: #9b59b6;
+            --bg-main: #020617;
+            --panel-bg: rgba(15, 23, 42, 0.85);
+            --panel-border: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.6);
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --purple: #8b5cf6;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Consolas', 'Courier New', monospace; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Consolas', 'Courier New', monospace; user-select: none; }
 
         body {
             background: radial-gradient(circle at center, #0f172a 0%, var(--bg-main) 100%);
             color: var(--text-main); display: flex; height: 100vh; overflow: hidden;
         }
 
+        /* Scanline Overlay for SCADA effect */
+        body::before {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100; background-size: 100% 4px, 6px 100%; pointer-events: none; opacity: 0.5;
+        }
+
         /* Sidebar UI */
         #sidebar {
-            width: 300px; background: var(--panel-bg); border-right: 1px solid var(--panel-border);
-            display: flex; flex-direction: column; z-index: 10; box-shadow: 5px 0 20px rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
+            width: 400px; background: var(--panel-bg); border-right: 1px solid var(--panel-border);
+            display: flex; flex-direction: column; z-index: 10; box-shadow: 10px 0 30px rgba(0,0,0,0.9);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
         }
+        
         #viewport { flex: 1; position: relative; }
 
         /* SCADA HUD */
         .sidebar-header {
             padding: 25px 20px; border-bottom: 1px solid var(--panel-border);
-            font-weight: bold; font-size: 1.1rem; color: var(--accent);
-            text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px var(--accent-glow);
+            font-weight: bold; font-size: 1.2rem; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 12px var(--accent-glow);
+            display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        
+        /* Navigation (Top half of sidebar) */
+        #nav-container {
+            display: flex; flex-wrap: wrap; padding: 10px; border-bottom: 2px solid var(--panel-border);
+            background: rgba(0,0,0,0.2); flex-shrink: 0;
         }
         
         .nav-btn {
-            background: none; border: none; color: var(--text-muted);
-            padding: 15px 20px; text-align: left; cursor: pointer;
-            border-left: 4px solid transparent; transition: all 0.3s ease;
-            font-size: 0.9rem; letter-spacing: 1px; position: relative;
+            background: rgba(30, 41, 59, 0.5); border: 1px solid #334155; color: var(--text-muted);
+            padding: 10px; margin: 4px; text-align: center; cursor: pointer; flex: 1 1 45%;
+            transition: all 0.2s ease; font-size: 0.8rem; letter-spacing: 1px; border-radius: 4px;
         }
-        .nav-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--panel-border) 0%, transparent 100%); }
-        .nav-btn:hover { background: rgba(0, 210, 255, 0.05); color: var(--text-main); padding-left: 25px; }
-        .nav-btn.active { background: rgba(0, 210, 255, 0.15); color: var(--accent); border-left-color: var(--accent); font-weight: bold; text-shadow: 0 0 8px var(--accent-glow); }
+        .nav-btn:hover { background: rgba(56, 189, 248, 0.1); color: var(--text-main); }
+        .nav-btn.active { background: rgba(56, 189, 248, 0.2); color: var(--text-main); border-color: var(--accent); font-weight: bold; box-shadow: 0 0 10px var(--accent-glow); }
 
-        /* Operation Control Panel */
+        /* Module Info Panel (Bottom half of sidebar) */
+        #module-info {
+            padding: 20px; overflow-y: auto; flex-grow: 1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #module-info::-webkit-scrollbar { width: 6px; }
+        #module-info::-webkit-scrollbar-track { background: transparent; }
+        #module-info::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+        #module-info::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        #info-title {
+            font-family: 'Consolas', monospace; font-size: 1.3rem; color: var(--accent);
+            margin-bottom: 15px; text-transform: uppercase; border-bottom: 1px dashed var(--text-muted); padding-bottom: 10px;
+        }
+        
+        .info-section { margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; border-left: 3px solid var(--text-muted); }
+        .info-section h4 { font-family: 'Consolas', monospace; font-size: 0.85rem; margin-bottom: 8px; letter-spacing: 1px; }
+        .info-section p { font-size: 0.9rem; line-height: 1.5; color: #cbd5e1; }
+        
+        .color-mech { color: #f8fafc; border-left-color: #94a3b8; }
+        .color-in { color: var(--accent); border-left-color: var(--accent); }
+        .color-out { color: var(--success); border-left-color: var(--success); }
+        .color-rej { color: var(--danger); border-left-color: var(--danger); }
+
+        /* Operation Control Panel (Right floating) */
         #ops-panel {
             position: absolute; top: 25px; right: 25px;
-            background: rgba(13, 20, 36, 0.85); border: 1px solid var(--accent);
-            padding: 20px; border-radius: 4px; box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
-            backdrop-filter: blur(5px); z-index: 20; min-width: 260px;
+            background: var(--panel-bg); border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 20px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.1);
+            backdrop-filter: blur(15px); z-index: 20; min-width: 280px;
         }
         .ops-header {
-            font-size: 0.85rem; color: var(--accent); margin-bottom: 15px;
-            text-transform: uppercase; border-bottom: 1px solid var(--panel-border); padding-bottom: 5px;
+            font-family: 'Consolas', monospace; font-size: 0.8rem; color: var(--accent); margin-bottom: 15px;
+            text-transform: uppercase; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px;
             letter-spacing: 2px; display: flex; justify-content: space-between; align-items: center;
         }
-        .ops-header::after { content: '● REC'; color: var(--danger); font-size: 0.7rem; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .ops-header::after { content: '● LIVE'; color: var(--danger); font-size: 0.7rem; animation: blink 1.5s infinite; letter-spacing: 1px;}
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
         .ops-btn {
-            display: block; width: 100%; background: #1a2a40; border: 1px solid #2c3e50;
-            color: #cbd5e1; padding: 12px; margin-bottom: 10px; cursor: pointer;
+            display: block; width: 100%; background: rgba(30, 41, 59, 0.8); border: 1px solid #334155;
+            color: #cbd5e1; padding: 12px 15px; margin-bottom: 10px; cursor: pointer;
             text-transform: uppercase; font-weight: bold; font-size: 0.8rem;
-            transition: all 0.2s; border-radius: 2px; text-align: left;
-            position: relative; overflow: hidden;
+            transition: all 0.3s; border-radius: 4px; text-align: left;
+            position: relative; overflow: hidden; letter-spacing: 0.5px;
         }
-        .ops-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: transparent; }
-        .ops-btn:hover { background: #23354f; }
+        .ops-btn:hover { background: #334155; transform: translateX(-2px); }
         
-        .ops-btn.active-service { background: rgba(46, 213, 115, 0.15); border-color: var(--success); color: var(--success); }
-        .ops-btn.active-service::before { background: var(--success); }
-        
-        .ops-btn.active-reject { background: rgba(255, 71, 87, 0.15); border-color: var(--danger); color: var(--danger); }
-        .ops-btn.active-reject::before { background: var(--danger); }
-        
-        .ops-btn.active-regen { background: rgba(155, 89, 182, 0.15); border-color: var(--purple); color: var(--purple); }
-        .ops-btn.active-regen::before { background: var(--purple); }
+        .ops-btn.active-service { background: rgba(16, 185, 129, 0.15); border-color: var(--success); color: var(--success); box-shadow: inset 4px 0 0 var(--success); }
+        .ops-btn.active-reject { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); color: var(--danger); box-shadow: inset 4px 0 0 var(--danger); }
+        .ops-btn.active-regen { background: rgba(139, 92, 246, 0.15); border-color: var(--purple); color: var(--purple); box-shadow: inset 4px 0 0 var(--purple); }
 
         #flow-desc {
-            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            background: rgba(9, 14, 23, 0.9); border: 1px solid var(--panel-border);
-            padding: 15px 25px; border-radius: 4px; color: #e2e8f0; pointer-events: none;
-            text-align: center; width: 60%; box-shadow: 0 0 15px rgba(0,0,0,0.8);
-            font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.5;
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--panel-bg); border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 30px; border-radius: 30px; color: #e2e8f0; pointer-events: none;
+            text-align: center; width: auto; max-width: 70%; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.6; backdrop-filter: blur(10px);
         }
+        
         .valve-legend {
-            margin-top: 10px; font-family: 'Consolas', monospace; font-size: 0.8rem;
-            color: var(--text-muted); display: flex; justify-content: center; gap: 20px;
+            position: absolute; bottom: 25px; left: 420px; background: var(--panel-bg);
+            padding: 15px; border-radius: 8px; border: 1px solid var(--panel-border);
+            font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 8px;
+            backdrop-filter: blur(10px); z-index: 10;
         }
-        .v-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
-        #canvas-container { width: 100%; height: 100%; }
+        .v-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        #canvas-container { width: 100%; height: 100%; outline: none; }
     </style>
-    <!-- Three.js (Core & OrbitControls) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
     <nav id="sidebar">
-        <div class="sidebar-header">WTP.SYS // V3.1<br><span style="font-size:0.7rem; color:var(--text-muted)">FULL PLANT + MIXED BED</span></div>
-        <div id="nav-container"></div>
+        <div class="sidebar-header">WTP_D-TWIN <span style="font-size:0.7rem; color:var(--text-muted); text-shadow:none;">V5.0</span></div>
+        <div id="nav-container">
+            <!-- Nav buttons injected here -->
+        </div>
+        <div id="module-info">
+            <h3 id="info-title">MODUL_NAME</h3>
+            <div class="info-section color-mech">
+                <h4>// MEKANISME PROSES</h4>
+                <p id="info-mech">...</p>
+            </div>
+            <div class="info-section color-in">
+                <h4>>> INPUT (UMPAN)</h4>
+                <p id="info-in">...</p>
+            </div>
+            <div class="info-section color-out">
+                <h4>>> OUTPUT (PRODUK)</h4>
+                <p id="info-out">...</p>
+            </div>
+            <div class="info-section color-rej">
+                <h4>>> REJECT (LIMBAH)</h4>
+                <p id="info-rej">...</p>
+            </div>
+        </div>
     </nav>
 
     <main id="viewport">
         <div id="canvas-container"></div>
         <div id="ops-panel">
-            <div class="ops-header">Operation Mode</div>
+            <div class="ops-header">Control Sequence</div>
             <div id="btn-container"></div>
         </div>
+        <div class="valve-legend">
+            <span style="color:var(--accent); font-weight:bold; margin-bottom:5px; font-family:'Consolas',monospace;">VALVE STATUS:</span>
+            <span style="font-family:'Consolas',monospace;"><span class="v-indicator" style="background:var(--success); box-shadow: 0 0 8px var(--success)"></span>OPEN (Flowing)</span>
+            <span style="font-family:'Consolas',monospace;"><span class="v-indicator" style="background:var(--danger); box-shadow: 0 0 8px var(--danger)"></span>CLOSED (Blocked)</span>
+        </div>
         <div id="flow-desc">
-            <div id="flow-text">Pilih mode operasional...</div>
-            <div class="valve-legend">
-                <span><span class="v-indicator" style="background:var(--success); box-shadow: 0 0 5px var(--success)"></span>Valve Terbuka</span>
-                <span><span class="v-indicator" style="background:var(--danger); box-shadow: 0 0 5px var(--danger)"></span>Valve Tertutup</span>
-            </div>
+            <div id="flow-text">Inisialisasi Sistem...</div>
         </div>
     </main>
 
     <script>
-        // Data Sistem dan Mode Operasional
+        // --- DATA & CONTENT (FULL END-TO-END EXPLANATION) ---
         const wtpData = [
-            {
-                id: 1, name: "1. CLARIFIER", builder: buildClarifier,
-                modes: [
-                    { id: 'service', label: '1. NORMAL SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Air baku masuk ke pusat, overflow air bersih. Valve inlet & outlet hijau.' },
-                    { id: 'desludge', label: '2. BLOWDOWN SLUDGE', type: 'reject', desc: '<b>[DESLUDGE]</b> Valve buangan bawah dibuka. Lumpur pekat (merah) disedot keluar.' }
-                ]
-            },
-            {
-                id: 2, name: "2. MULTIMEDIA FILTER", builder: buildMMF,
-                modes: [
-                    { id: 'service', label: '1. DOWNFLOW SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Aliran normal dari atas ke bawah menembus pasir silika/antrasit.' },
-                    { id: 'backwash', label: '2. UPFLOW BACKWASH', type: 'reject', desc: '<b>[BACKWASH]</b> Aliran dibalik. Air masuk dari bawah mengaduk pasir, kotoran dibuang dari pipa atas.' }
-                ]
-            },
-            {
-                id: 3, name: "3. ACTIVATED CARBON", builder: buildACF,
-                modes: [
-                    { id: 'service', label: '1. ADSORPTION SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Karbon aktif mengikat klorin bebas. Aliran normal atas ke bawah.' },
-                    { id: 'backwash', label: '2. MEDIA BACKWASH', type: 'reject', desc: '<b>[BACKWASH]</b> Membuang serpihan karbon yang hancur agar tidak masuk ke sistem RO.' }
-                ]
-            },
-            {
-                id: 4, name: "4. ION SOFTENER", builder: buildSoftener,
-                modes: [
-                    { id: 'service', label: '1. SOFTENING SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Resin kation menyerap Kalsium/Magnesium, menghasilkan air lunak.' },
-                    { id: 'regen', label: '2. BRINE REGEN', type: 'regen', desc: '<b>[REGENERATION]</b> Injeksi air garam (Kuning) menyapu resin. Limbah kalsium klorida dibuang ke bawah.' }
-                ]
-            },
-            {
-                id: 5, name: "5. ULTRAFILTRATION", builder: buildUF,
-                modes: [
-                    { id: 'service', label: '1. CROSS-FLOW SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Air menembus membran 0.01 mikron. Air bersih ke atas, Reject menyapu permukaan.' },
-                    { id: 'backwash', label: '2. MEMBRANE BACKWASH', type: 'reject', desc: '<b>[BACKWASH]</b> Air bersih ditekan balik dari dalam membran untuk membersihkan pori-pori.' }
-                ]
-            },
-            {
-                id: 6, name: "6. REVERSE OSMOSIS", builder: buildRO,
-                modes: [
-                    { id: 'service', label: '1. HIGH-PRESS SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Tekanan tinggi memisahkan air (hijau) dari garam/mineral (merah).' },
-                    { id: 'flush', label: '2. LOW-PRESS FLUSH', type: 'reject', desc: '<b>[FLUSHING]</b> Tekanan diturunkan, PCV valve Reject terbuka penuh untuk menyapu sisa kerak garam.' }
-                ]
-            },
-            {
-                id: 7, name: "7. KATION ANION (MIXED BED)", builder: buildMixedBed,
-                modes: [
-                    { id: 'service', label: '1. POLISHING SERVICE', type: 'service', desc: '<b>[SERVICE]</b> Resin Kation & Anion bereaksi bersamaan membentuk Ultrapure Water.' },
-                    { id: 'separation', label: '2. RESIN SEPARATION', type: 'reject', desc: '<b>[BACKWASH]</b> Aliran naik dari bawah untuk memisahkan resin anion (ringan) di atas dan kation (berat) di bawah.' },
-                    { id: 'regen', label: '3. ACID/BASE REGEN', type: 'regen', desc: '<b>[REGENERATION]</b> Asam HCl (Oranye) diinjeksi ke kation bawah. Basa NaOH (Ungu) ke anion atas. Bertemu di tengah (Collector) lalu dibuang.' }
-                ]
-            }
+            { id: 1, name: "CLARIFIER", builder: buildClarifier, 
+              mech: "Tahap pertama untuk menjinakkan air baku yang keruh. Mengandalkan gaya gravitasi dan bantuan bahan kimia. Air disuntik dengan Koagulan (PAC) dan Flokulan (Polimer) agar kotoran menggumpal membentuk <b>Flok</b>. Air dimasukkan ke tangki raksasa yang alirannya sangat pelan, membiarkan gaya gravitasi menarik flok berat ke dasar, sementara air jernih meluap perlahan ke atas.",
+              input: "• Air Baku (Raw Water)<br>• Koagulan & Flokulan",
+              output: "• Air Jernih (Clarified Water)",
+              reject: "• Lumpur padat (Sludge) dibuang via *blowdown* bawah.",
+              modes: [
+                { id: 'service', type: 'service', label: '1. NORMAL SERVICE', desc: '<b>[SERVICE]</b> Air baku dipompa ke pusat (Center Well). Kecepatan air dikurangi drastis, membiarkan flok berat mengendap. Air jernih meluap perlahan ke sisi luar.' },
+                { id: 'desludge', type: 'reject', label: '2. BLOWDOWN SLUDGE', desc: '<b>[DESLUDGE]</b> Lengan Scraper mengumpulkan lumpur pekat ke dasar kerucut. Valve Drain terbuka menyedot lumpur keluar.' }
+            ]},
+            { id: 2, name: "MMF FILTER", builder: buildMMF, 
+              mech: "Tangki bertekanan berisi media penyaring berlapis. Menggunakan <b>Antrasit</b> di lapisan atas untuk menjebak kotoran kasar, <b>Pasir Silika</b> di tengah untuk kotoran medium, dan <b>Garnet</b> (sangat halus) di dasar untuk menahan sisa partikel yang lolos dari Clarifier.",
+              input: "• Clarified Water",
+              output: "• Filtered Water (Bebas partikel makro & TSS).",
+              reject: "• Air Backwash kotor (membuang endapan pasir ke drainase).",
+              modes: [
+                { id: 'service', type: 'service', label: '1. DOWNFLOW SERVICE', desc: '<b>[SERVICE]</b> Filtrasi fisik absolut. Air bertekanan menembus pori-pori Antrasit dan Pasir Silika dari atas ke bawah.' },
+                { id: 'backwash', type: 'reject', label: '2. UPFLOW BACKWASH', desc: '<b>[BACKWASH]</b> Arah aliran dibalik! Air bertekanan disemprot dari bawah mengekspansi media penyaring, membuang lumpur terjebak ke atas.' }
+            ]},
+            { id: 3, name: "ACTIVATED CARBON", builder: buildACF, 
+              mech: "Sistem adsorpsi (penyerapan) molekuler, bukan penyaring fisik. Tangki ini penuh berisi <b>Karbon Aktif</b> dengan pori-pori mikroskopis. Tugas krusialnya adalah mengikat <b>Klorin Bebas</b>, bau, dan warna organik agar tidak merusak membran polimer RO di hilir.",
+              input: "• Filtered Water (yang mengandung Klorin)",
+              output: "• De-chlorinated Water (Air bebas Klorin).",
+              reject: "• Sisa serpihan debu karbon (awal *rinse*).",
+              modes: [
+                { id: 'service', type: 'service', label: '1. ADSORPTION SERVICE', desc: '<b>[SERVICE]</b> Luas permukaan mikroskopis Karbon Aktif secara kimiawi mengikat klorin bebas untuk melindungi membran RO.' },
+                { id: 'backwash', type: 'reject', label: '2. MEDIA BACKWASH', desc: '<b>[BACKWASH]</b> Mengurai kepadatan (compaction) ranjang karbon dan membuang debu karbon halus.' }
+            ]},
+            { id: 4, name: "ION SOFTENER", builder: buildSoftener, 
+              mech: "Sistem pertukaran ion (*Ion Exchange*) untuk menghilangkan Kesadahan (*Hardness*). Manik <b>Resin Kation</b> bermuatan Sodium (Na) akan menarik ion Kalsium dan Magnesium (penyebab kerak kapur/scaling) dari air dan menukarnya dengan Sodium yang ramah terhadap perpipaan.",
+              input: "• De-chlorinated Water<br>• Injeksi Garam (NaCl) saat Regenerasi",
+              output: "• Soft Water (Air Lunak bebas Kalsium/Magnesium).",
+              reject: "• Limbah Kalsium Klorida pekat (Saat Regenerasi).",
+              modes: [
+                { id: 'service', type: 'service', label: '1. SOFTENING SERVICE', desc: '<b>[SERVICE]</b> Resin Kation menangkap ion Kalsium & Magnesium penyebab kerak, menukarnya dengan Sodium murni.' },
+                { id: 'regen', type: 'regen', label: '2. BRINE REGEN', desc: '<b>[REGENERATION]</b> Valve injeksi terbuka. Cairan garam (Brine) pekat menyapu resin, secara paksa melepas Kalsium menjadi limbah merah.' }
+            ]},
+            { id: 5, name: "ULTRAFILTRATION", builder: buildUF, 
+              mech: "Masuk ke tahap penyaringan mikroskopis menggunakan modul membran <b>Hollow Fiber</b> berpori 0.01 mikron. Memutus rantai patogen, koloid, silika, dan bakteri 100%. Sistem <i>Cross-flow</i> digunakan agar membran tidak mudah buntu.",
+              input: "• Soft Water (Tekanan pompa sedang)",
+              output: "• UF Permeate (Air steril, SDI < 3).",
+              reject: "• Reject / Konsentrat yang menyapu permukaan membran.",
+              modes: [
+                { id: 'service', type: 'service', label: '1. CROSS-FLOW SERVICE', desc: '<b>[SERVICE]</b> Air melintasi ribuan serat berongga. Air murni menembus dinding 0.01 mikron, Reject menyapu kotoran permukaan.' },
+                { id: 'backwash', type: 'reject', label: '2. MEMBRANE BACKWASH', desc: '<b>[BACKWASH]</b> Air bersih dipompa balik dari dalam serat (Inside-Out) untuk mendobrak kotoran yang menempel di pori-pori luar.' }
+            ]},
+            { id: 6, name: "REVERSE OSMOSIS", builder: buildRO, 
+              mech: "Jantung dari plant demineralisasi. Membran <i>spiral-wound</i> berpori ekstrem <b>0.0001 mikron</b>. Menggunakan pompa bertekanan sangat tinggi untuk melawan efek osmosis alami, menyaring hingga 99% ion mineral, garam, dan logam terlarut (TDS).",
+              input: "• UF Permeate<br>• Bahan kimia *Antiscalant*<br>• Tekanan Sangat Tinggi",
+              output: "• RO Permeate (Air nyaris murni, TDS rendah).",
+              reject: "• Brine (Limbah garam dengan konsentrasi yang sangat pekat).",
+              modes: [
+                { id: 'service', type: 'service', label: '1. HIGH-PRESS SERVICE', desc: '<b>[SERVICE]</b> Pompa bertekanan ekstrem memaksa air melawan osmosis. 99% garam mineral tertahan dan dibuang (Brine).' },
+                { id: 'flush', type: 'reject', label: '2. LOW-PRESS FLUSH', desc: '<b>[FLUSHING]</b> PCV dibuka penuh. Tekanan diturunkan untuk membilas membran dengan aliran deras agar garam tidak mengerak.' }
+            ]},
+            { id: 7, name: "MIXED BED DEMIN", builder: buildMixedBed, 
+              mech: "Tahap *Polishing* pemurnian absolut untuk industri berat (misal: *Boiler* pembangkit listrik). Campuran homogen antara <b>Resin Kation (Asam/H+)</b> dan <b>Resin Anion (Basa/OH-)</b> menangkap 1% sisa ion mineral yang lolos dari RO, mengubahnya seketika menjadi molekul H2O (Air Ultra-Murni).",
+              input: "• RO Permeate<br>• Bahan Kimia Regenerasi (HCl & NaOH)",
+              output: "• Ultrapure Water (Air tanpa mineral, Konduktivitas < 0.1 µS).",
+              reject: "• Limbah basuhan asam dan basa hasil pemisahan resin.",
+              modes: [
+                { id: 'service', type: 'service', label: '1. POLISHING SERVICE', desc: '<b>[SERVICE]</b> Resin Kation (H+) dan Anion (OH-) bercampur, merubah sisa ion menjadi molekul H2O murni.' },
+                { id: 'separation', type: 'reject', label: '2. RESIN SEPARATION', desc: '<b>[SEPARATION]</b> Air didorong dari bawah untuk memisahkan resin berdasarkan berat: Anion mengapung di atas, Kation turun ke bawah.' },
+                { id: 'regen', type: 'regen', label: '3. ACID/BASE REGEN', desc: '<b>[REGENERATION]</b> Injeksi Basa (NaOH - Ungu) dari atas, Asam (HCl - Oranye) dari dasar. Bertemu di kolektor tengah jadi limbah netral.' }
+            ]}
         ];
 
-        // --- 1. ENGINE SETUP ---
+        // --- 1. ENGINE & ENVIRONMENT SETUP ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
         container.appendChild(renderer.domElement);
 
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 1000);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true; controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 + 0.1;
+        controls.maxPolarAngle = Math.PI / 2; 
 
-        // Lighting
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(15, 25, 15); dirLight.castShadow = true;
+        // Pro-Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(15, 30, -15);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5; dirLight.shadow.camera.far = 100;
+        dirLight.shadow.camera.left = -20; dirLight.shadow.camera.right = 20;
+        dirLight.shadow.camera.top = 20; dirLight.shadow.camera.bottom = -20;
+        dirLight.shadow.bias = -0.001;
         scene.add(dirLight);
 
-        // Materials
-        const pipePVC = new THREE.MeshPhysicalMaterial({ color: 0x334155, transmission: 0.8, opacity: 0.7, transparent: true, roughness: 0.1 });
-        const darkSteel = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.7 });
-        const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xcbe3f7, transmission: 0.95, ior: 1.5, thickness: 0.5, roughness: 0.05, transparent: true, side: THREE.DoubleSide });
+        // --- 2. ADVANCED MATERIALS ---
+        function createStripeTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f59e0b'; ctx.fillRect(0,0,256,256);
+            ctx.fillStyle = '#1e293b';
+            for(let i=-256; i<512; i+=64) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i+256, 256);
+                ctx.lineTo(i+256+32, 256); ctx.lineTo(i+32, 0); ctx.fill();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(4, 0.2);
+            return tex;
+        }
 
-        // Global State
-        let currentGroup = new THREE.Group(); scene.add(currentGroup);
-        const grid = new THREE.GridHelper(50, 50, 0x1e293b, 0x0f172a); grid.position.y = -0.01; scene.add(grid);
+        const stripeMat = new THREE.MeshStandardMaterial({ map: createStripeTexture(), roughness: 0.8 });
+        const darkSteel = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6, metalness: 0.6 });
+        const pipePVC = new THREE.MeshPhysicalMaterial({ color: 0x334155, transmission: 0.6, opacity: 0.9, transparent: true, roughness: 0.2, metalness: 0.1 });
+        const pipeSolid = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, metalness: 0.3 });
         
+        const glassMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xe0f2fe, transmission: 0.95, ior: 1.5, thickness: 0.8, 
+            roughness: 0.05, metalness: 0.1, transparent: true, side: THREE.DoubleSide 
+        });
+
+        // --- 3. SYSTEM STATE ---
+        let currentGroup = new THREE.Group(); scene.add(currentGroup);
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.1, metalness: 0.5 }));
+        floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
         let valves = {};         
         let particleGroups = {}; 
 
-        // --- 2. COMPONENTS BUILDERS ---
+        // --- 4. COMPONENTS BUILDERS ---
+
+        function createGauge(position, rotation) {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16), darkSteel); body.rotation.x = Math.PI/2;
+            const face = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 16), new THREE.MeshBasicMaterial({color: 0xffffff})); face.rotation.x = Math.PI/2;
+            const needle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.02), new THREE.MeshBasicMaterial({color: 0xef4444}));
+            needle.position.set(0, 0, 0.06); needle.rotation.z = -Math.PI/4;
+            group.add(body, face, needle);
+            group.position.copy(position); group.rotation.copy(rotation);
+            return group;
+        }
 
         function createValve(position, rotationAxis, angle, id) {
             const vGroup = new THREE.Group();
-            
-            // Flanges & Body
             const flangeGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16);
             const f1 = new THREE.Mesh(flangeGeo, darkSteel); f1.position.y = 0.3; vGroup.add(f1);
             const f2 = new THREE.Mesh(flangeGeo, darkSteel); f2.position.y = -0.3; vGroup.add(f2);
-            vGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.6, 16), new THREE.MeshStandardMaterial({color: 0x475569})));
+            vGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.6, 16), darkSteel));
 
-            // Actuator
-            const actuator = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.6), darkSteel);
-            actuator.position.z = 0.5; actuator.rotation.x = Math.PI/2; vGroup.add(actuator);
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 8), new THREE.MeshStandardMaterial({color: 0x94a3b8}));
+            stem.rotation.x = Math.PI/2; stem.position.z = 0.4; vGroup.add(stem);
+            
+            const wheel = new THREE.Group();
+            wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 8, 16), darkSteel));
+            const cross = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 0.04), darkSteel);
+            const cross2 = cross.clone(); cross2.rotation.z = Math.PI/2;
+            wheel.add(cross, cross2);
+            wheel.rotation.x = Math.PI/2; wheel.position.z = 0.7; vGroup.add(wheel);
 
-            // LED
-            const led = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), new THREE.MeshBasicMaterial({color: 0xff4757}));
-            led.position.z = 0.75; vGroup.add(led);
+            const led = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.1, 16), new THREE.MeshBasicMaterial({color: 0xef4444}));
+            led.rotation.x = Math.PI/2; led.position.z = 0.7; vGroup.add(led);
+            vGroup.add(createGauge(new THREE.Vector3(0, 0.4, 0), new THREE.Euler(0, 0, 0)));
 
             vGroup.position.copy(position);
             if(rotationAxis === 'x') vGroup.rotation.x = angle;
             else if(rotationAxis === 'z') vGroup.rotation.z = angle;
             else if(rotationAxis === 'y') vGroup.rotation.y = angle;
 
-            vGroup.setOpen = (isOpen) => { led.material.color.setHex(isOpen ? 0x2ed573 : 0xff4757); };
+            vGroup.setOpen = (isOpen) => { 
+                led.material.color.setHex(isOpen ? 0x10b981 : 0xef4444); 
+                if(isOpen) wheel.rotation.z = Math.PI/4; else wheel.rotation.z = 0;
+            };
             valves[id] = vGroup; currentGroup.add(vGroup);
             return vGroup;
         }
@@ -252,16 +370,22 @@
                 const p1 = points[i], p2 = points[i+1], dist = p1.distanceTo(p2);
                 const pipe = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, dist, 16), pipePVC);
                 pipe.position.copy(p1).lerp(p2, 0.5);
-                pipe.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), p2.clone().sub(p1).normalize());
-                currentGroup.add(pipe);
-                const elbow = new THREE.Mesh(new THREE.SphereGeometry(radius*1.1, 16, 16), pipePVC);
-                elbow.position.copy(p1); currentGroup.add(elbow);
+                const rot = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), p2.clone().sub(p1).normalize());
+                pipe.quaternion.copy(rot); pipe.castShadow = true; currentGroup.add(pipe);
+                
+                const elbow = new THREE.Mesh(new THREE.SphereGeometry(radius*1.1, 16, 16), pipeSolid);
+                elbow.position.copy(p1); elbow.castShadow = true; currentGroup.add(elbow);
+                
+                if(i > 0) {
+                    const flange = new THREE.Mesh(new THREE.CylinderGeometry(radius*1.4, radius*1.4, 0.05, 16), darkSteel);
+                    flange.position.copy(p1); flange.quaternion.copy(rot); flange.castShadow = true; currentGroup.add(flange);
+                }
             }
-            const finalElbow = new THREE.Mesh(new THREE.SphereGeometry(radius*1.1, 16, 16), pipePVC);
+            const finalElbow = new THREE.Mesh(new THREE.SphereGeometry(radius*1.1, 16, 16), pipeSolid);
             finalElbow.position.copy(points[points.length-1]); currentGroup.add(finalElbow);
         }
 
-        function registerFlow(modeId, points, radius, colorHex, speed = 0.03) {
+        function registerFlow(modeId, points, radius, colorHex, speed = 0.02) {
             if(!particleGroups[modeId]) particleGroups[modeId] = [];
             const flowData = { segments: [], totalLength: 0, particles: [], speed, color: colorHex };
             for(let i=0; i<points.length-1; i++) {
@@ -270,195 +394,221 @@
                 flowData.totalLength += l;
             }
             const group = new THREE.Group(); group.visible = false;
-            const numParticles = Math.floor(flowData.totalLength * 3);
-            const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+            
+            const numParticles = Math.floor(flowData.totalLength * 4);
+            const pMat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
             
             for(let i=0; i<numParticles; i++) {
-                const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius*0.5, 8, 8), pMat);
+                const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius*0.2, radius*0.2, radius*1.5, 8), pMat);
                 flowData.particles.push({ mesh, progress: i / numParticles });
                 group.add(mesh);
             }
             particleGroups[modeId].push(flowData); currentGroup.add(group); flowData.group = group;
         }
 
-        // --- 3. MODULE BUILDERS ---
+        function createIndustrialSkid(w, d) {
+            const skid = new THREE.Group();
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), darkSteel);
+            frame.position.y = 0.25; frame.castShadow = true; frame.receiveShadow = true; skid.add(frame);
+            
+            const edge = new THREE.Mesh(new THREE.BoxGeometry(w+0.05, 0.4, d+0.05), stripeMat);
+            edge.position.y = 0.25; skid.add(edge);
+            
+            for(let i=-w/2+1; i<w/2; i+=1) {
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.51, d), darkSteel);
+                beam.position.set(i, 0.25, 0); skid.add(beam);
+            }
+            return skid;
+        }
+
+        // --- 5. SPECIFIC BUILDERS ---
 
         function buildClarifier() {
             const v = THREE.Vector3;
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 6, 64, 1, true, 0, Math.PI*1.4), glassMat).translateY(4));
+            currentGroup.add(createIndustrialSkid(12, 12));
+            const tank = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 6, 64, 1, true, 0, Math.PI*1.4), glassMat);
+            tank.position.y = 4; tank.castShadow = true; currentGroup.add(tank);
             currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 6, 64, 1, true, Math.PI*1.4, Math.PI*0.6), darkSteel).translateY(4));
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(3.9, 3.9, 5.5, 32), new THREE.MeshPhysicalMaterial({color:0x00d2ff, transmission:0.8, transparent:true})).translateY(3.75));
+            
+            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(3.9, 3.9, 5.5, 32), new THREE.MeshPhysicalMaterial({color:0x38bdf8, transmission:0.9, transparent:true})).translateY(3.75));
             currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 4, 32), darkSteel).translateY(5));
             
-            const rIn = [new v(-7,6,0), new v(-4,6,0), new v(0,6,0), new v(0,4,0)];
-            const rOut = [new v(4,6.5,0), new v(5,6.5,0), new v(5,1,0), new v(7,1,0)];
-            const rSludge = [new v(0,1,0), new v(0,0.5,0), new v(-3,0.5,0), new v(-3,0.5,3)];
+            const bridge = new THREE.Mesh(new THREE.BoxGeometry(9, 0.3, 1), darkSteel);
+            bridge.position.y = 7; bridge.castShadow = true; currentGroup.add(bridge);
+            
+            const rIn = [new v(-8,6.5,0), new v(-4,6.5,0), new v(0,6.5,0), new v(0,4,0)];
+            const rOut = [new v(4,6.5,0), new v(5,6.5,0), new v(5,1,0), new v(8,1,0)];
+            const rSludge = [new v(0,1,0), new v(0,0.5,0), new v(-3,0.5,0), new v(-3,0.5,4)];
             
             buildStaticPipe(rIn, 0.25); buildStaticPipe(rOut, 0.25); buildStaticPipe(rSludge, 0.2);
-            createValve(new v(-4,6,0), 'x', Math.PI/2, 'V_IN');
+            createValve(new v(-4,6.5,0), 'x', Math.PI/2, 'V_IN');
             createValve(new v(5,3,0), 'y', 0, 'V_OUT');
             createValve(new v(-2,0.5,0), 'x', Math.PI/2, 'V_SLUDGE');
 
-            registerFlow('service', rIn, 0.25, 0x00d2ff); registerFlow('service', rOut, 0.25, 0x2ed573);
-            registerFlow('desludge', rIn, 0.25, 0x00d2ff); registerFlow('desludge', rOut, 0.25, 0x2ed573); registerFlow('desludge', rSludge, 0.2, 0xff4757, 0.05);
+            registerFlow('service', rIn, 0.25, 0x38bdf8); registerFlow('service', rOut, 0.25, 0x10b981);
+            registerFlow('desludge', rIn, 0.25, 0x38bdf8); registerFlow('desludge', rOut, 0.25, 0x10b981); registerFlow('desludge', rSludge, 0.2, 0xef4444, 0.05);
 
-            camera.position.set(10, 8, 12); controls.target.set(0, 4, 0);
+            camera.position.set(12, 10, 14); controls.target.set(0, 4, 0);
         }
 
-        function buildStandardFilter(mediaColor) {
+        function buildPressureVesselTemplate(mediaColor) {
             const v = THREE.Vector3;
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 6, 32), glassMat).translateY(4.5));
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 4, 32), new THREE.MeshStandardMaterial({color: mediaColor})).translateY(4));
+            currentGroup.add(createIndustrialSkid(14, 8));
+
+            const vessel = new THREE.Group();
+            const cyl = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 5, 32), glassMat); cyl.position.y = 4.5;
+            const topDome = new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 16, 0, Math.PI*2, 0, Math.PI/2), glassMat); topDome.position.y = 7; topDome.scale.y = 0.5;
+            const botDome = new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 16, 0, Math.PI*2, 0, Math.PI/2), darkSteel); botDome.rotation.x = Math.PI; botDome.position.y = 2; botDome.scale.y = 0.5;
+            
+            for(let i=0; i<4; i++) {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.5, 16), darkSteel);
+                const angle = (Math.PI/2)*i + Math.PI/4;
+                leg.position.set(Math.cos(angle)*2.3, 1.25, Math.sin(angle)*2.3); leg.castShadow = true; vessel.add(leg);
+            }
+            vessel.add(cyl, topDome, botDome); currentGroup.add(vessel);
+            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 4, 32), new THREE.MeshStandardMaterial({color: mediaColor, roughness:0.9})).translateY(4));
 
             const fM = [new v(-6, 7.5, 4), new v(-2, 7.5, 4)];
             const fT = [new v(-2, 7.5, 4), new v(-2, 7.5, 0), new v(0, 7.5, 0)];
-            const fB = [new v(-2, 7.5, 4), new v(-2, 1.5, 4), new v(-2, 1.5, 0), new v(0, 1.5, 0)];
-            const pM = [new v(0, 1.5, 0), new v(2, 1.5, 0), new v(2, 1.5, 4), new v(6, 1.5, 4)];
+            const fB = [new v(-2, 7.5, 4), new v(-2, 2.5, 4), new v(-2, 2.5, 0), new v(0, 2.5, 0)];
+            const pM = [new v(0, 2.5, 0), new v(2, 2.5, 0), new v(2, 2.5, 4), new v(6, 2.5, 4)];
             const dM = [new v(0, 7.5, 0), new v(2, 7.5, 0), new v(2, 7.5, -3), new v(6, 7.5, -3)];
             
             buildStaticPipe(fM, 0.2); buildStaticPipe(fT.slice(1), 0.2); buildStaticPipe(fB.slice(1), 0.2);
             buildStaticPipe(pM.slice(1), 0.2); buildStaticPipe(dM.slice(1), 0.2);
 
-            createValve(new v(-2, 5.5, 4), 'y', 0, 'V_BW_IN'); createValve(new v(-2, 7.5, 2), 'x', Math.PI/2, 'V_IN');
-            createValve(new v(2, 1.5, 2), 'x', Math.PI/2, 'V_OUT'); createValve(new v(2, 7.5, -1.5), 'x', Math.PI/2, 'V_BW_OUT');
+            createValve(new v(-2, 5.0, 4), 'y', 0, 'V_BW_IN'); createValve(new v(-2, 7.5, 2), 'x', Math.PI/2, 'V_IN');
+            createValve(new v(2, 2.5, 2), 'x', Math.PI/2, 'V_OUT'); createValve(new v(2, 7.5, -1.5), 'x', Math.PI/2, 'V_BW_OUT');
 
-            registerFlow('service', fM.concat(fT.slice(1)), 0.2, 0x00d2ff); registerFlow('service', [new v(0,7.5,0), new v(0,1.5,0)], 0.5, 0x00d2ff, 0.01); registerFlow('service', pM, 0.2, 0x2ed573);
-            registerFlow('backwash', fM.concat(fB.slice(1)), 0.2, 0x00d2ff, 0.05); registerFlow('backwash', [new v(0,1.5,0), new v(0,7.5,0)], 0.6, 0x00d2ff, 0.02); registerFlow('backwash', dM, 0.2, 0xff4757, 0.05);
-            camera.position.set(0, 5, 12); controls.target.set(0, 4.5, 0);
+            registerFlow('service', fM.concat(fT.slice(1)), 0.2, 0x38bdf8); registerFlow('service', [new v(0,7.5,0), new v(0,2.5,0)], 0.5, 0x38bdf8, 0.01); registerFlow('service', pM, 0.2, 0x10b981);
+            registerFlow('backwash', fM.concat(fB.slice(1)), 0.2, 0x38bdf8, 0.05); registerFlow('backwash', [new v(0,2.5,0), new v(0,7.5,0)], 0.6, 0x38bdf8, 0.02); registerFlow('backwash', dM, 0.2, 0xef4444, 0.05);
+            camera.position.set(0, 6, 14); controls.target.set(0, 4.5, 0);
         }
 
-        function buildMMF() { buildStandardFilter(0xd4a373); }
-        function buildACF() { buildStandardFilter(0x111111); }
+        function buildMMF() { buildPressureVesselTemplate(0xd4a373); }
+        function buildACF() { buildPressureVesselTemplate(0x1e293b); }
+        
         function buildSoftener() {
-            buildStandardFilter(0xd97706);
+            buildPressureVesselTemplate(0xf59e0b);
             const v = THREE.Vector3;
-            const bL = [new v(-5, 0, -2), new v(-3, 0, -2), new v(-3, 7.5, -2), new v(0, 7.5, -2), new v(0, 7.5, 0)];
+            const bL = [new v(-6, 0.5, -2), new v(-3, 0.5, -2), new v(-3, 7.5, -2), new v(0, 7.5, -2), new v(0, 7.5, 0)];
             buildStaticPipe(bL, 0.15); createValve(new v(-3, 4, -2), 'y', 0, 'V_BRINE');
-            buildStaticPipe([new v(2,1.5,0), new v(2,1.5,-3), new v(6,1.5,-3)], 0.2); createValve(new v(2, 1.5, -1.5), 'x', Math.PI/2, 'V_DRAIN_BOT');
+            buildStaticPipe([new v(2,2.5,0), new v(2,2.5,-3), new v(6,2.5,-3)], 0.2); createValve(new v(2, 2.5, -1.5), 'x', Math.PI/2, 'V_DRAIN_BOT');
 
-            registerFlow('regen', bL, 0.15, 0xfeca57); registerFlow('regen', [new v(0,7.5,0), new v(0,1.5,0)], 0.5, 0xfeca57, 0.01);
-            registerFlow('regen', [new v(0,1.5,0), new v(2,1.5,0), new v(2,1.5,-3), new v(6,1.5,-3)], 0.2, 0xff4757);
+            registerFlow('regen', bL, 0.15, 0xf59e0b); registerFlow('regen', [new v(0,7.5,0), new v(0,2.5,0)], 0.5, 0xf59e0b, 0.01);
+            registerFlow('regen', [new v(0,2.5,0), new v(2,2.5,0), new v(2,2.5,-3), new v(6,2.5,-3)], 0.2, 0xef4444);
         }
 
-        // ---------- KATION ANION (MIXED BED) ----------
-        function buildMixedBed() {
-            const v = THREE.Vector3;
-            
-            // Vessel
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 6, 32), glassMat).translateY(4.5));
-            
-            // Two layers of resin: Anion (Yellow/Top) and Cation (Orange/Bot)
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 2, 32), new THREE.MeshStandardMaterial({color: 0xfde047})).translateY(5.5)); // Anion
-            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 2, 32), new THREE.MeshStandardMaterial({color: 0xd97706})).translateY(3.5)); // Cation
-
-            // Pipes 
-            const feedMain = [new v(-6, 7.5, 3), new v(-2, 7.5, 3), new v(-2, 7.5, 0), new v(0, 7.5, 0)];
-            const prodBot = [new v(0, 1.5, 0), new v(2, 1.5, 0), new v(2, 1.5, 3), new v(6, 1.5, 3)];
-            
-            // Regeneration Injection Lines
-            const naohTop = [new v(-6, 6.5, -3), new v(-1, 6.5, -3), new v(-1, 7.5, 0), new v(0, 7.5, 0)]; // Basa (Ungu)
-            const hclBot = [new v(-6, 2.5, -3), new v(-1, 2.5, -3), new v(-1, 1.5, 0), new v(0, 1.5, 0)]; // Asam (Oranye)
-            const drainMid = [new v(0, 4.5, 0), new v(3, 4.5, 0), new v(3, 4.5, -3), new v(6, 4.5, -3)]; // Middle Drain (Merah)
-
-            buildStaticPipe(feedMain, 0.2); buildStaticPipe(prodBot, 0.2);
-            buildStaticPipe(naohTop, 0.15); buildStaticPipe(hclBot, 0.15); buildStaticPipe(drainMid, 0.2);
-            
-            // Backwash Separation line (Upflow)
-            buildStaticPipe([new v(-2, 7.5, 3), new v(-2, 1.5, 3), new v(-2, 1.5, 0)], 0.2);
-            buildStaticPipe([new v(2, 7.5, 0), new v(2, 7.5, -3), new v(6, 7.5, -3)], 0.2);
-
-            // VALVES
-            createValve(new v(-2, 7.5, 1.5), 'x', Math.PI/2, 'V_IN');
-            createValve(new v(2, 1.5, 1.5), 'x', Math.PI/2, 'V_OUT');
-            createValve(new v(-2, 4.5, 3), 'y', 0, 'V_BW_IN');
-            createValve(new v(2, 7.5, -1.5), 'x', Math.PI/2, 'V_BW_OUT');
-            
-            createValve(new v(-1, 6.5, -1.5), 'x', Math.PI/2, 'V_NAOH'); // Chemical Basa
-            createValve(new v(-1, 2.5, -1.5), 'x', Math.PI/2, 'V_HCL');  // Chemical Asam
-            createValve(new v(3, 4.5, -1.5), 'x', Math.PI/2, 'V_DRAIN_MID'); // Mid Collector
-
-            // MODE 1: SERVICE (Top -> Bot)
-            registerFlow('service', feedMain, 0.2, 0x00d2ff); 
-            registerFlow('service', [new v(0,7.5,0), new v(0,1.5,0)], 0.5, 0x00d2ff, 0.01);
-            registerFlow('service', prodBot, 0.2, 0x00ffff); // Ultrapure Bright Cyan
-
-            // MODE 2: SEPARATION / BACKWASH (Bot -> Top)
-            registerFlow('separation', [new v(-6, 7.5, 3), new v(-2, 7.5, 3), new v(-2, 1.5, 3), new v(-2, 1.5, 0), new v(0, 1.5, 0)], 0.2, 0x00d2ff);
-            registerFlow('separation', [new v(0,1.5,0), new v(0,7.5,0)], 0.6, 0x00d2ff, 0.02);
-            registerFlow('separation', [new v(0, 7.5, 0), new v(2, 7.5, 0), new v(2, 7.5, -3), new v(6, 7.5, -3)], 0.2, 0xff4757);
-
-            // MODE 3: REGENERATION (Top In + Bot In -> Mid Out)
-            registerFlow('regen', naohTop, 0.15, 0x9b59b6); // NaOH Purple
-            registerFlow('regen', hclBot, 0.15, 0xf39c12); // HCl Orange
-            
-            registerFlow('regen', [new v(0,7.5,0), new v(0,4.5,0)], 0.5, 0x9b59b6, 0.01); // NaOH down to mid
-            registerFlow('regen', [new v(0,1.5,0), new v(0,4.5,0)], 0.5, 0xf39c12, 0.01); // HCl up to mid
-            
-            registerFlow('regen', drainMid, 0.2, 0xff4757); // Waste Out
-
-            camera.position.set(0, 5, 14); controls.target.set(0, 4.5, 0);
-        }
-
-        // ---------- UF & RO ----------
         function buildUF() {
             const v = THREE.Vector3;
-            for(let i=0; i<3; i++) {
-                const m = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 5, 32), glassMat);
-                m.position.set(-2 + i*2, 3, 0); currentGroup.add(m);
-                createPipeRoute([new v(-2+i*2, 0.5, 1), new v(-2+i*2, 0.5, 0)], 0.1);
-                createPipeRoute([new v(-2+i*2, 5.5, 0), new v(-2+i*2, 5.5, -1)], 0.1);
-                createPipeRoute([new v(-2+i*2, 5.0, 0), new v(-2+i*2, 5.0, 1)], 0.1);
+            currentGroup.add(createIndustrialSkid(12, 6));
+
+            for(let i=0; i<4; i++) {
+                const m = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 5, 32), glassMat);
+                m.position.set(-3 + i*2, 3.5, 0); currentGroup.add(m);
+                createPipeRoute([new v(-3+i*2, 1, 1), new v(-3+i*2, 1, 0)], 0.15); 
+                createPipeRoute([new v(-3+i*2, 6, 0), new v(-3+i*2, 6, -1)], 0.15); 
+                createPipeRoute([new v(-3+i*2, 5.5, 0), new v(-3+i*2, 5.5, 1)], 0.15); 
             }
-            buildStaticPipe([new v(-5, 0.5, 1), new v(4, 0.5, 1)], 0.2); // Feed bot
-            buildStaticPipe([new v(-5, 5.5, -1), new v(4, 5.5, -1)], 0.2); // Permeate top
-            buildStaticPipe([new v(-5, 5.0, 1), new v(4, 5.0, 1), new v(4, 1.0, 1), new v(6, 1.0, 1)], 0.15); // Reject
+            buildStaticPipe([new v(-6, 1, 1), new v(5, 1, 1)], 0.25); 
+            buildStaticPipe([new v(-6, 6, -1), new v(5, 6, -1)], 0.25); 
+            buildStaticPipe([new v(-6, 5.5, 1), new v(5, 5.5, 1), new v(5, 1.5, 1), new v(7, 1.5, 1)], 0.2); 
 
-            createValve(new v(-4, 0.5, 1), 'z', 0, 'V_IN');
-            createValve(new v(3, 5.5, -1), 'z', 0, 'V_OUT');
-            createValve(new v(4, 3, 1), 'y', 0, 'V_REJ');
+            createValve(new v(-4.5, 1, 1), 'z', 0, 'V_IN');
+            createValve(new v(4, 6, -1), 'z', 0, 'V_OUT');
+            createValve(new v(5, 3.5, 1), 'y', 0, 'V_REJ');
 
-            registerFlow('service', [new v(-5,0.5,1), new v(4,0.5,1)], 0.2, 0x00d2ff);
-            registerFlow('service', [new v(-5,5.5,-1), new v(4,5.5,-1)], 0.2, 0x2ed573);
-            registerFlow('service', [new v(-5,5.0,1), new v(4,5.0,1), new v(4,1.0,1), new v(6,1.0,1)], 0.15, 0xff4757);
+            registerFlow('service', [new v(-6,1,1), new v(5,1,1)], 0.25, 0x38bdf8);
+            registerFlow('service', [new v(-6,6,-1), new v(5,6,-1)], 0.25, 0x10b981);
+            registerFlow('service', [new v(-6,5.5,1), new v(5,5.5,1), new v(5,1.5,1), new v(7,1.5,1)], 0.2, 0xef4444);
 
-            registerFlow('backwash', [new v(4,5.5,-1), new v(-5,5.5,-1)], 0.2, 0x2ed573); // Reverse flow
-            registerFlow('backwash', [new v(-5,5.0,1), new v(4,5.0,1), new v(4,1.0,1), new v(6,1.0,1)], 0.15, 0xff4757);
-            
-            camera.position.set(0, 5, 10); controls.target.set(0, 3, 0);
+            registerFlow('backwash', [new v(5,6,-1), new v(-6,6,-1)], 0.25, 0x10b981);
+            registerFlow('backwash', [new v(-6,5.5,1), new v(5,5.5,1), new v(5,1.5,1), new v(7,1.5,1)], 0.2, 0xef4444, 0.05);
+            camera.position.set(0, 6, 12); controls.target.set(0, 3.5, 0);
         }
 
         function buildRO() {
             const v = THREE.Vector3;
-            for(let i=0; i<3; i++) {
-                const z = -1.5 + i*1.5;
-                const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 6, 32), glassMat);
-                m.rotation.z = Math.PI/2; m.position.set(0, 2, z); currentGroup.add(m);
-                createPipeRoute([new v(-3.5, 2, z), new v(-3, 2, z)], 0.1);
-                createPipeRoute([new v(3, 2, z), new v(3.5, 2, z)], 0.1);
-                createPipeRoute([new v(3, 2, z), new v(3, 3, z)], 0.08);
+            currentGroup.add(createIndustrialSkid(12, 8));
+
+            for(let i=0; i<4; i++) {
+                const z = -2 + i*1.3;
+                const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 7, 32), glassMat);
+                m.rotation.z = Math.PI/2; m.position.set(0, 2.5, z); currentGroup.add(m);
+                createPipeRoute([new v(-4, 2.5, z), new v(-3.5, 2.5, z)], 0.15); 
+                createPipeRoute([new v(3.5, 2.5, z), new v(4, 2.5, z)], 0.15); 
+                createPipeRoute([new v(3.5, 2.5, z), new v(3.5, 3.5, z)], 0.1); 
             }
-            buildStaticPipe([new v(-5, 0.5, 0), new v(-3.5, 0.5, 0), new v(-3.5, 2, -1.5), new v(-3.5, 2, 1.5)], 0.2);
-            buildStaticPipe([new v(3, 3, -1.5), new v(3, 3, 2.5), new v(5, 3, 2.5)], 0.15);
-            buildStaticPipe([new v(3.5, 2, -1.5), new v(3.5, 2, 1.5), new v(3.5, 0.5, 1.5), new v(5, 0.5, 1.5)], 0.2);
+            buildStaticPipe([new v(-6, 1, 0), new v(-4, 1, 0), new v(-4, 2.5, -2), new v(-4, 2.5, 2)], 0.25);
+            buildStaticPipe([new v(3.5, 3.5, -2), new v(3.5, 3.5, 3), new v(6, 3.5, 3)], 0.2);
+            buildStaticPipe([new v(4, 2.5, -2), new v(4, 2.5, 2), new v(4, 1, 2), new v(6, 1, 2)], 0.25);
 
-            createValve(new v(-4, 0.5, 0), 'z', 0, 'V_IN');
-            createValve(new v(4, 3, 2.5), 'z', 0, 'V_OUT');
-            createValve(new v(4, 0.5, 1.5), 'z', 0, 'V_REJ');
+            createValve(new v(-5, 1, 0), 'z', 0, 'V_IN');
+            createValve(new v(5, 3.5, 3), 'z', 0, 'V_OUT');
+            createValve(new v(4, 1.5, 2), 'y', 0, 'V_REJ'); 
 
-            registerFlow('service', [new v(-5,0.5,0), new v(-3.5,0.5,0), new v(-3.5,2,1.5)], 0.2, 0x00d2ff);
-            registerFlow('service', [new v(3,3,-1.5), new v(3,3,2.5), new v(5,3,2.5)], 0.15, 0x2ed573);
-            registerFlow('service', [new v(3.5,2,-1.5), new v(3.5,2,1.5), new v(3.5,0.5,1.5), new v(5,0.5,1.5)], 0.2, 0xff4757);
+            registerFlow('service', [new v(-6,1,0), new v(-4,1,0), new v(-4,2.5,2)], 0.25, 0x38bdf8, 0.04);
+            registerFlow('service', [new v(3.5,3.5,-2), new v(3.5,3.5,3), new v(6,3.5,3)], 0.2, 0x10b981);
+            registerFlow('service', [new v(4,2.5,-2), new v(4,2.5,2), new v(4,1,2), new v(6,1,2)], 0.25, 0xef4444);
 
-            registerFlow('flush', [new v(-5,0.5,0), new v(-3.5,0.5,0), new v(-3.5,2,1.5)], 0.2, 0x00d2ff, 0.06);
-            registerFlow('flush', [new v(3.5,2,-1.5), new v(3.5,2,1.5), new v(3.5,0.5,1.5), new v(5,0.5,1.5)], 0.2, 0xff4757, 0.08); // Fast reject
+            registerFlow('flush', [new v(-6,1,0), new v(-4,1,0), new v(-4,2.5,2)], 0.25, 0x38bdf8, 0.08);
+            registerFlow('flush', [new v(4,2.5,-2), new v(4,2.5,2), new v(4,1,2), new v(6,1,2)], 0.25, 0xef4444, 0.1);
 
-            camera.position.set(0, 6, 12); controls.target.set(0, 2, 0);
+            camera.position.set(10, 8, 12); controls.target.set(0, 2.5, 0);
         }
 
-        // Helpers
+        function buildMixedBed() {
+            const v = THREE.Vector3;
+            currentGroup.add(createIndustrialSkid(14, 8));
+            
+            const vessel = new THREE.Group();
+            vessel.add(new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 5, 32), glassMat).translateY(4.5));
+            vessel.add(new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 16, 0, Math.PI*2, 0, Math.PI/2), glassMat).translateY(7).scale.set(1,0.5,1));
+            vessel.add(new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 16, 0, Math.PI*2, 0, Math.PI/2), darkSteel).translateY(2).scale.set(1,0.5,1).rotateX(Math.PI));
+            currentGroup.add(vessel);
+
+            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 2, 32), new THREE.MeshStandardMaterial({color: 0xfde047})).translateY(5.5));
+            currentGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 2, 32), new THREE.MeshStandardMaterial({color: 0xf59e0b})).translateY(3.5));
+
+            const feedMain = [new v(-6, 7.5, 3), new v(-2, 7.5, 3), new v(-2, 7.5, 0), new v(0, 7.5, 0)];
+            const prodBot = [new v(0, 2.5, 0), new v(2, 2.5, 0), new v(2, 2.5, 3), new v(6, 2.5, 3)];
+            const naohTop = [new v(-6, 6.5, -3), new v(-1, 6.5, -3), new v(-1, 7.5, 0), new v(0, 7.5, 0)]; 
+            const hclBot = [new v(-6, 3.5, -3), new v(-1, 3.5, -3), new v(-1, 2.5, 0), new v(0, 2.5, 0)]; 
+            const drainMid = [new v(0, 4.5, 0), new v(3, 4.5, 0), new v(3, 4.5, -3), new v(6, 4.5, -3)]; 
+
+            buildStaticPipe(feedMain, 0.2); buildStaticPipe(prodBot, 0.2);
+            buildStaticPipe(naohTop, 0.15); buildStaticPipe(hclBot, 0.15); buildStaticPipe(drainMid, 0.2);
+            buildStaticPipe([new v(-2, 7.5, 3), new v(-2, 2.5, 3), new v(-2, 2.5, 0)], 0.2);
+            buildStaticPipe([new v(2, 7.5, 0), new v(2, 7.5, -3), new v(6, 7.5, -3)], 0.2);
+
+            createValve(new v(-2, 7.5, 1.5), 'x', Math.PI/2, 'V_IN');
+            createValve(new v(2, 2.5, 1.5), 'x', Math.PI/2, 'V_OUT');
+            createValve(new v(-2, 5.0, 3), 'y', 0, 'V_BW_IN');
+            createValve(new v(2, 7.5, -1.5), 'x', Math.PI/2, 'V_BW_OUT');
+            createValve(new v(-1, 6.5, -1.5), 'x', Math.PI/2, 'V_NAOH'); 
+            createValve(new v(-1, 3.5, -1.5), 'x', Math.PI/2, 'V_HCL');  
+            createValve(new v(3, 4.5, -1.5), 'x', Math.PI/2, 'V_DRAIN_MID');
+
+            registerFlow('service', feedMain, 0.2, 0x38bdf8); 
+            registerFlow('service', [new v(0,7.5,0), new v(0,2.5,0)], 0.5, 0x38bdf8, 0.01);
+            registerFlow('service', prodBot, 0.2, 0x22d3ee);
+
+            registerFlow('separation', [new v(-6, 7.5, 3), new v(-2, 7.5, 3), new v(-2, 2.5, 3), new v(-2, 2.5, 0), new v(0, 2.5, 0)], 0.2, 0x38bdf8);
+            registerFlow('separation', [new v(0,2.5,0), new v(0,7.5,0)], 0.6, 0x38bdf8, 0.02);
+            registerFlow('separation', [new v(0, 7.5, 0), new v(2, 7.5, 0), new v(2, 7.5, -3), new v(6, 7.5, -3)], 0.2, 0xef4444);
+
+            registerFlow('regen', naohTop, 0.15, 0x8b5cf6); 
+            registerFlow('regen', hclBot, 0.15, 0xf59e0b); 
+            registerFlow('regen', [new v(0,7.5,0), new v(0,4.5,0)], 0.5, 0x8b5cf6, 0.01);
+            registerFlow('regen', [new v(0,2.5,0), new v(0,4.5,0)], 0.5, 0xf59e0b, 0.01);
+            registerFlow('regen', drainMid, 0.2, 0xef4444);
+
+            camera.position.set(0, 6, 15); controls.target.set(0, 4.5, 0);
+        }
+
         function createPipeRoute(points, radius) { buildStaticPipe(points, radius); }
 
-        // --- 4. OPERATION & ANIMATION LOGIC ---
+        // --- 6. LOGIC CONTROLLER ---
 
         function activateMode(moduleConfig, mode) {
             document.querySelectorAll('.ops-btn').forEach(b => b.className = 'ops-btn');
@@ -467,26 +617,25 @@
 
             Object.values(particleGroups).forEach(groupArray => { groupArray.forEach(flow => flow.group.visible = false); });
             if(particleGroups[mode.id]) particleGroups[mode.id].forEach(flow => flow.group.visible = true);
-
             Object.keys(valves).forEach(id => valves[id].setOpen(false));
 
-            if(moduleConfig.id === 1) { // Clarifier
+            if(moduleConfig.id === 1) { 
                 if(mode.id === 'service') { valves['V_IN'].setOpen(true); valves['V_OUT'].setOpen(true); }
                 if(mode.id === 'desludge') { valves['V_IN'].setOpen(true); valves['V_OUT'].setOpen(true); valves['V_SLUDGE'].setOpen(true); }
             }
-            if(moduleConfig.id === 2 || moduleConfig.id === 3) { // MMF/ACF
+            if(moduleConfig.id === 2 || moduleConfig.id === 3) {
                 if(mode.id === 'service') { valves['V_IN'].setOpen(true); valves['V_OUT'].setOpen(true); }
                 if(mode.id === 'backwash') { valves['V_BW_IN'].setOpen(true); valves['V_BW_OUT'].setOpen(true); }
             }
-            if(moduleConfig.id === 4) { // Softener
+            if(moduleConfig.id === 4) {
                 if(mode.id === 'service') { valves['V_IN'].setOpen(true); valves['V_OUT'].setOpen(true); }
                 if(mode.id === 'regen') { valves['V_BRINE'].setOpen(true); valves['V_DRAIN_BOT'].setOpen(true); }
             }
-            if(moduleConfig.id === 5 || moduleConfig.id === 6) { // UF/RO
+            if(moduleConfig.id === 5 || moduleConfig.id === 6) {
                 if(mode.id === 'service') { valves['V_IN'].setOpen(true); valves['V_OUT'].setOpen(true); valves['V_REJ'].setOpen(true); }
                 if(mode.id === 'backwash' || mode.id === 'flush') { valves['V_IN'].setOpen(true); valves['V_REJ'].setOpen(true); }
             }
-            if(moduleConfig.id === 7) { // Kation Anion
+            if(moduleConfig.id === 7) { 
                 if(mode.id === 'service') { valves['V_IN'].setOpen(true); valves['V_OUT'].setOpen(true); }
                 if(mode.id === 'separation') { valves['V_BW_IN'].setOpen(true); valves['V_BW_OUT'].setOpen(true); }
                 if(mode.id === 'regen') { valves['V_NAOH'].setOpen(true); valves['V_HCL'].setOpen(true); valves['V_DRAIN_MID'].setOpen(true); }
@@ -496,9 +645,20 @@
         function loadModule(id) {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-nav-' + id).classList.add('active');
+            
             const data = wtpData.find(d => d.id === id);
             
-            while(currentGroup.children.length > 0) currentGroup.remove(currentGroup.children[0]);
+            // Populating UI Panels with detailed data
+            document.getElementById('info-title').innerText = data.name;
+            document.getElementById('info-mech').innerHTML = data.mech;
+            document.getElementById('info-in').innerHTML = data.input;
+            document.getElementById('info-out').innerHTML = data.output;
+            document.getElementById('info-rej').innerHTML = data.reject;
+
+            while(currentGroup.children.length > 0) {
+                const child = currentGroup.children[0];
+                currentGroup.remove(child);
+            }
             valves = {}; particleGroups = {}; 
             data.builder();
 
@@ -521,16 +681,31 @@
             navContainer.appendChild(btn);
         });
 
+        // Animation calculations
         function getPositionAlongPath(flowData, progress) {
             const targetDist = progress * flowData.totalLength; let currentDist = 0;
             for(let i=0; i<flowData.segments.length; i++) {
                 const seg = flowData.segments[i];
                 if(targetDist <= currentDist + seg.length) {
-                    return seg.p1.clone().lerp(seg.p2, (targetDist - currentDist) / seg.length);
+                    const localProg = (targetDist - currentDist) / seg.length;
+                    return seg.p1.clone().lerp(seg.p2, localProg);
                 }
                 currentDist += seg.length;
             }
             return flowData.segments[flowData.segments.length-1].p2.clone();
+        }
+
+        function getRotationAlongPath(flowData, progress) {
+            const targetDist = progress * flowData.totalLength; let currentDist = 0;
+            for(let i=0; i<flowData.segments.length; i++) {
+                const seg = flowData.segments[i];
+                if(targetDist <= currentDist + seg.length) {
+                    const dir = seg.p2.clone().sub(seg.p1).normalize();
+                    return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+                }
+                currentDist += seg.length;
+            }
+            return new THREE.Quaternion();
         }
 
         function animate() {
@@ -541,6 +716,7 @@
                         flow.particles.forEach(p => {
                             p.progress += flow.speed; if(p.progress > 1) p.progress = 0;
                             p.mesh.position.copy(getPositionAlongPath(flow, p.progress));
+                            p.mesh.quaternion.copy(getRotationAlongPath(flow, p.progress));
                         });
                     }
                 });
@@ -553,7 +729,7 @@
             camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        loadModule(7); // Start at Mixed Bed
+        loadModule(1); // Default to start at Clarifier
         animate();
     </script>
 </body>
